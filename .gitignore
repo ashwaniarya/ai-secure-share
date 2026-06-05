@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+backend/.venv/
+*.db
+
+# Node
+node_modules/
+frontend/dist/
+
+# Built frontend copied into the backend image at runtime
+backend/static/
+
+# Local manage-token store
+.share-knowledge/
+
+# Environment / OS
+.env
+.DS_Store
