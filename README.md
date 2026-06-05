@@ -69,6 +69,17 @@ cd frontend && npm test                             # components, pages, client 
 backend/.venv/bin/python -m pytest skill/share-knowledge/tests   # skill CLI + round-trip
 ```
 
+## Link previews (Slack / social)
+
+`GET /s/{slug}` server-renders Open Graph tags into the page `<head>` so links
+unfurl in Slack, Discord, iMessage, Twitter, etc. — no Slack app required. Title
+and description are derived from the markdown; the SPA still hydrates for humans.
+
+- 🔒 Password-protected and expired notes show generic copy (no content excerpt).
+- Tags sit at the top of `<head>` (crawlers fetch only the first ~32 KB).
+- Optional image: drop a PNG at `frontend/public/og-default.png` to enable `og:image`.
+- ⚠️ Slack **caches** unfurls, so edits may not refresh a preview immediately.
+
 ## Deploy (Railway)
 
 Live: **https://ai-secure-share-production.up.railway.app**

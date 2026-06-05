@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Server swaps this block per share for link previews (see backend/app/preview.py). -->
+    <!--OG:START-->
     <title>ShareKnowledge</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ShareKnowledge" />
+    <meta property="og:title" content="ShareKnowledge" />
+    <meta property="og:description" content="Paste markdown, get a shareable link." />
+    <meta name="twitter:card" content="summary" />
+    <!--OG:END-->
   </head>
   <body>
     <div id="root"></div>
