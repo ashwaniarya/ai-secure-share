@@ -5,13 +5,14 @@ The router stays thin: it validates input, resolves the share, enforces access
 delegates all persistence to ``crud``.
 """
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app import crud
 from app.config import settings
 from app.database import get_db
 from app.models import Share
+from app.ratelimit import create_limit, limiter, unlock_limit
 from app.schemas import (
     ShareCreate,
     ShareCreateResponse,
@@ -57,7 +58,13 @@ def _view(share: Share, *, include_content: bool) -> ShareView:
 
 
 @router.post("", response_model=ShareCreateResponse, status_code=201)
-def create_share(payload: ShareCreate, db: Session = Depends(get_db)):
+@limiter.limit(create_limit)
+def create_share(
+    request: Request,
+    response: Response,
+    payload: ShareCreate,
+    db: Session = Depends(get_db),
+):
     share, manage_token = crud.create_share(
         db,
         content=payload.content,
@@ -87,7 +94,14 @@ def read_share(
 
 
 @router.post("/{slug}/unlock", response_model=UnlockResponse)
-def unlock_share(slug: str, payload: UnlockRequest, db: Session = Depends(get_db)):
+@limiter.limit(unlock_limit)
+def unlock_share(
+    request: Request,
+    response: Response,
+    slug: str,
+    payload: UnlockRequest,
+    db: Session = Depends(get_db),
+):
     share = _get_or_404(db, slug)
     if crud.is_expired(share):
         raise HTTPException(status_code=410, detail="This share has expired")

@@ -30,5 +30,13 @@ class Settings(BaseSettings):
     # Directory of the built frontend (Vite ``dist``); served if it exists.
     static_dir: str = "static"
 
+    # Rate limiting (slowapi). Limits are "<count>/<period>" strings.
+    # Disabled in the test suite; enabled by default in dev/prod.
+    rate_limit_enabled: bool = True
+    rate_limit_default: str = "60/minute"  # most API routes, per client IP
+    rate_limit_create: str = "20/minute"  # POST /api/shares — anti-spam
+    rate_limit_unlock: str = "5/minute"  # POST .../unlock — password brute-force
+    rate_limit_storage_uri: str = "memory://"  # swap to redis:// to share across replicas
+
 
 settings = Settings()

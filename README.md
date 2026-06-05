@@ -11,6 +11,7 @@ sanitized preview. Optional password, expiry, edit, and delete — no accounts.
 - ⏱️ Optional expiry (1h / 1d / 7d / 30d / never).
 - ✏️ Edit and 🗑️ delete via a **manage token** shown once at creation.
 - 🤖 A Claude Code skill (`share-knowledge`) to drive the API from the CLI.
+- 🚦 Central per-IP rate limiting (slowapi) — tighter on create (spam) and unlock (brute-force).
 
 ## Architecture
 
@@ -70,17 +71,26 @@ backend/.venv/bin/python -m pytest skill/share-knowledge/tests   # skill CLI + r
 
 ## Deploy (Railway)
 
+Live: **https://ai-secure-share-production.up.railway.app**
+
 1. Create a project from this repo. Railway builds via the `Dockerfile`.
 2. Add the **Postgres** plugin — it provides `DATABASE_URL` automatically.
-3. Set `PUBLIC_BASE_URL` to your service URL (e.g.
-   `https://your-app.up.railway.app`) so generated links are correct.
+3. Set `PUBLIC_BASE_URL` to your service URL **without a trailing slash** so
+   generated links are correct:
+   ```bash
+   railway variables --set "PUBLIC_BASE_URL=https://ai-secure-share-production.up.railway.app"
+   ```
+   (or set it in the service's Variables tab). `PORT` is injected automatically.
 4. Health check is `/api/health`. Postgres persists data across redeploys.
+5. *(Optional)* Tune rate limits via env (`RATE_LIMIT_*`, see
+   `backend/.env.example`). Defaults are in-memory and per-process; for >1
+   replica set `RATE_LIMIT_STORAGE_URI` to a Railway Redis `redis://…`.
 
 ## AI skill
 
 See [`skill/share-knowledge/SKILL.md`](skill/share-knowledge/SKILL.md). Install:
 ```bash
 ln -s "$(pwd)/skill/share-knowledge" ~/.claude/skills/share-knowledge
-export SHARE_KNOWLEDGE_URL=https://your-app.up.railway.app
+export SHARE_KNOWLEDGE_URL=https://ai-secure-share-production.up.railway.app
 ```
 Then: `python skill/share-knowledge/scripts/share.py create --content notes.md`

@@ -11,10 +11,13 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app import models  # noqa: F401  (import registers ORM tables on Base)
 from app.config import settings
 from app.database import Base, engine
+from app.ratelimit import limiter, rate_limit_exceeded_handler
 from app.routers import shares
 
 
@@ -30,6 +33,7 @@ def _mount_frontend(app: FastAPI) -> None:
     index_file = static_dir / "index.html"
 
     @app.get("/{full_path:path}")
+    @limiter.exempt
     def serve_spa(full_path: str):
         if full_path.startswith("api"):
             raise HTTPException(status_code=404)
@@ -42,12 +46,19 @@ def _mount_frontend(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     app = FastAPI(title="ShareKnowledge")
 
+    # Central rate limiting: SlowAPIMiddleware applies the per-IP default to API
+    # routes; create/unlock override it (see routers/shares.py).
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
     # No migration tool for v1: create tables on startup if absent.
     Base.metadata.create_all(bind=engine)
 
     app.include_router(shares.router)
 
     @app.get("/api/health")
+    @limiter.exempt
     def health() -> dict[str, str]:
         return {"status": "ok"}
 

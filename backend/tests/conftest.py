@@ -6,6 +6,9 @@ import os
 # so app startup never touches a real file. Per-test data uses the StaticPool
 # engine created in ``db_session`` below.
 os.environ.setdefault("DATABASE_URL", "sqlite://")
+# Keep the rate limiter off for the general suite; the rate-limit tests enable it
+# explicitly on the shared limiter instance.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
 import pytest
 from fastapi.testclient import TestClient
