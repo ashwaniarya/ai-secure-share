@@ -1,12 +1,28 @@
 # ShareKnowledge
 
-Paste markdown, get a shareable link. Anyone with the link sees a rendered,
-sanitized preview. Optional password, expiry, edit, and delete — no accounts.
+> **Instantly turn any AI response into a clean, beautiful shareable link.**
+
+Paste an answer from ChatGPT, Claude, or any markdown → get an instant link →
+anyone opens a rendered, sanitized preview. Optional password, expiry, edit, and
+delete — no accounts. (AI responses are just markdown, so anything markdown works.)
+
+🔗 **Live:** https://ai-secure-share-production.up.railway.app
+
+## How it works
+
+1. **Paste** an AI response (or any markdown).
+2. **Get** a shareable link + a one-time **manage token** (for later edit/delete).
+3. **Share** it — anyone opens a clean rendered preview, and the link **unfurls
+   with a title + summary in Slack, Discord, and iMessage**.
+
+> 🤖 **From Claude Code:** the [`share-knowledge`](#ai-skill) skill turns a
+> response into a link in one command — no leaving the terminal.
 
 ## Features
 
-- 📝 Create a share from any markdown and get a public link.
+- 📝 Paste any AI response / markdown → instant public link.
 - 👀 Rendered preview with **no raw HTML** + `rehype-sanitize` (XSS-safe).
+- 🔗 Rich link previews — unfurls with title + summary in Slack / Discord / social.
 - 🔒 Optional view password.
 - ⏱️ Optional expiry (1h / 1d / 7d / 30d / never).
 - ✏️ Edit and 🗑️ delete via a **manage token** shown once at creation.
