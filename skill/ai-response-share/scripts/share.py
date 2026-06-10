@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""CLI for the ShareKnowledge API: create, read, update, and delete shares.
+"""CLI for the AI Response Share API: create, read, update, and delete shares.
 
 Standalone and stdlib-only so it can run anywhere without installing packages.
-Manage tokens returned at creation are cached in ``~/.share-knowledge/tokens.json``
-(override with ``$SHARE_KNOWLEDGE_HOME``) so later edits/deletes don't need the
-token passed explicitly. The API base URL comes from ``$SHARE_KNOWLEDGE_URL``
+Manage tokens returned at creation are cached in ``~/.ai-response-share/tokens.json``
+(override with ``$AI_RESPONSE_SHARE_HOME``) so later edits/deletes don't need the
+token passed explicitly. The API base URL comes from ``$AI_RESPONSE_SHARE_URL``
 (default ``http://localhost:8000``).
 """
 
@@ -52,8 +52,8 @@ def parse_expiry(value) -> int | None:
 def _home(store_home=None) -> Path:
     if store_home is not None:
         return Path(store_home)
-    env_home = os.environ.get("SHARE_KNOWLEDGE_HOME")
-    return Path(env_home) if env_home else Path.home() / ".share-knowledge"
+    env_home = os.environ.get("AI_RESPONSE_SHARE_HOME")
+    return Path(env_home) if env_home else Path.home() / ".ai-response-share"
 
 
 def _token_file(store_home=None) -> Path:
@@ -210,12 +210,12 @@ def _read_content(value: str) -> str:
 
 
 def _base_url(args) -> str:
-    return args.url or os.environ.get("SHARE_KNOWLEDGE_URL", DEFAULT_BASE_URL)
+    return args.url or os.environ.get("AI_RESPONSE_SHARE_URL", DEFAULT_BASE_URL)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage ShareKnowledge shares.")
-    parser.add_argument("--url", help="API base URL (default $SHARE_KNOWLEDGE_URL)")
+    parser = argparse.ArgumentParser(description="Manage AI Response Share shares.")
+    parser.add_argument("--url", help="API base URL (default $AI_RESPONSE_SHARE_URL)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     create = sub.add_parser("create", help="create a share")

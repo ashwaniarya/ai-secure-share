@@ -1,19 +1,19 @@
 ---
-name: share-knowledge
-description: Create, read, update, and delete shareable markdown links via the ShareKnowledge API. Use when the user wants to share markdown through a link, "create a share", "make a shareable markdown link", "paste this as a link", or read/update/delete an existing share by its slug.
+name: ai-response-share
+description: Create, read, update, and delete shareable markdown links via the AI Response Share API. Use when the user wants to share markdown through a link, "create a share", "make a shareable markdown link", "paste this as a link", or read/update/delete an existing share by its slug.
 ---
 
-# share-knowledge
+# ai-response-share
 
-Manage ShareKnowledge markdown shares from the command line. The helper is
+Manage AI Response Share markdown shares from the command line. The helper is
 stdlib-only (`scripts/share.py`) and talks to the deployed HTTP API.
 
 ## Configuration
 
-- `SHARE_KNOWLEDGE_URL` — API base URL (default `http://localhost:8000`). Set
+- `AI_RESPONSE_SHARE_URL` — API base URL (default `http://localhost:8000`). Set
   this to your Railway URL in production.
-- Manage tokens are cached in `~/.share-knowledge/tokens.json` (override with
-  `SHARE_KNOWLEDGE_HOME`) so `update`/`delete` work without re-supplying the
+- Manage tokens are cached in `~/.ai-response-share/tokens.json` (override with
+  `AI_RESPONSE_SHARE_HOME`) so `update`/`delete` work without re-supplying the
   token. Pass `--token` to override.
 
 ## Commands
@@ -56,13 +56,13 @@ Deletes the share (cached or `--token` manage token required).
 
 Copy or symlink this directory into a skills location so it is auto-discovered:
 ```
-ln -s "$(pwd)/skill/share-knowledge" ~/.claude/skills/share-knowledge
+ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
 ```
 
 ## Tests
 
 ```
-backend/.venv/bin/python -m pytest skill/share-knowledge/tests
+backend/.venv/bin/python -m pytest skill/ai-response-share/tests
 ```
 Unit tests cover expiry parsing and the token store; an integration test spins
 up the real API and exercises a full create → read → update → delete round-trip.

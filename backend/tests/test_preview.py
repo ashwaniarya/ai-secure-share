@@ -87,7 +87,7 @@ def og_client(db_session, tmp_path, monkeypatch):
     index.write_text(
         "<!doctype html><html><head>\n"
         "<!--OG:START-->\n"
-        '<meta property="og:title" content="ShareKnowledge" />\n'
+        '<meta property="og:title" content="AI Response Share" />\n'
         '<meta property="og:description" content="Paste markdown, get a shareable link." />\n'
         "<!--OG:END-->\n"
         '</head><body><div id="root"></div></body></html>'
@@ -140,4 +140,4 @@ def test_expired_preview_has_no_content(og_client, db_session):
 def test_unknown_slug_serves_shell_with_default_meta(og_client):
     response = og_client.get("/s/does-not-exist")
     assert response.status_code == 200
-    assert "ShareKnowledge" in response.text
+    assert "AI Response Share" in response.text

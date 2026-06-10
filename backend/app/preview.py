@@ -17,7 +17,7 @@ from __future__ import annotations
 import html
 import re
 
-SITE_NAME = "ShareKnowledge"
+SITE_NAME = "AI Response Share"
 SITE_TAGLINE = "Paste markdown, get a shareable link."
 DEFAULT_TITLE = "Shared note"
 

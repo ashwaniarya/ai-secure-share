@@ -69,7 +69,7 @@ def _mount_frontend(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="ShareKnowledge")
+    app = FastAPI(title="AI Response Share")
 
     # Central rate limiting: SlowAPIMiddleware applies the per-IP default to API
     # routes; create/unlock override it (see routers/shares.py).

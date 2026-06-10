@@ -1,4 +1,4 @@
-# ShareKnowledge
+# AI Response Share
 
 > **Instantly turn any AI response into a clean, beautiful shareable link.**
 
@@ -6,7 +6,7 @@ Paste an answer from ChatGPT, Claude, or any markdown → get an instant link �
 anyone opens a rendered, sanitized preview. Optional password, expiry, edit, and
 delete — no accounts. (AI responses are just markdown, so anything markdown works.)
 
-🔗 **Live:** https://ai-secure-share-production.up.railway.app
+🔗 **Live:** https://airesponseshare.com
 
 ## How it works
 
@@ -15,7 +15,7 @@ delete — no accounts. (AI responses are just markdown, so anything markdown wo
 3. **Share** it — anyone opens a clean rendered preview, and the link **unfurls
    with a title + summary in Slack, Discord, and iMessage**.
 
-> 🤖 **From Claude Code:** the [`share-knowledge`](#ai-skill) skill turns a
+> 🤖 **From Claude Code:** the [`ai-response-share`](#ai-skill) skill turns a
 > response into a link in one command — no leaving the terminal.
 
 ## Features
@@ -26,7 +26,7 @@ delete — no accounts. (AI responses are just markdown, so anything markdown wo
 - 🔒 Optional view password.
 - ⏱️ Optional expiry (1h / 1d / 7d / 30d / never).
 - ✏️ Edit and 🗑️ delete via a **manage token** shown once at creation.
-- 🤖 A Claude Code skill (`share-knowledge`) to drive the API from the CLI.
+- 🤖 A Claude Code skill (`ai-response-share`) to drive the API from the CLI.
 - 🚦 Central per-IP rate limiting (slowapi) — tighter on create (spam) and unlock (brute-force).
 
 ## Architecture
@@ -56,7 +56,7 @@ are authorized by a hashed manage token; passwords are hashed with pbkdf2_sha256
 ```
 backend/    FastAPI + SQLAlchemy (app/), pytest suite (tests/)
 frontend/   Vite + TypeScript + React, vitest/RTL tests
-skill/      share-knowledge Claude Code skill (stdlib CLI + tests)
+skill/      ai-response-share Claude Code skill (stdlib CLI + tests)
 Dockerfile  multi-stage build → single runtime image
 railway.toml
 ```
@@ -82,7 +82,7 @@ npm run dev
 ```bash
 cd backend && ./.venv/bin/python -m pytest          # API, CRUD, security
 cd frontend && npm test                             # components, pages, client (incl. XSS)
-backend/.venv/bin/python -m pytest skill/share-knowledge/tests   # skill CLI + round-trip
+backend/.venv/bin/python -m pytest skill/ai-response-share/tests   # skill CLI + round-trip
 ```
 
 ## Link previews (Slack / social)
@@ -98,14 +98,14 @@ and description are derived from the markdown; the SPA still hydrates for humans
 
 ## Deploy (Railway)
 
-Live: **https://ai-secure-share-production.up.railway.app**
+Live: **https://airesponseshare.com**
 
 1. Create a project from this repo. Railway builds via the `Dockerfile`.
 2. Add the **Postgres** plugin — it provides `DATABASE_URL` automatically.
 3. Set `PUBLIC_BASE_URL` to your service URL **without a trailing slash** so
    generated links are correct:
    ```bash
-   railway variables --set "PUBLIC_BASE_URL=https://ai-secure-share-production.up.railway.app"
+   railway variables --set "PUBLIC_BASE_URL=https://airesponseshare.com"
    ```
    (or set it in the service's Variables tab). `PORT` is injected automatically.
 4. Health check is `/api/health`. Postgres persists data across redeploys.
@@ -115,9 +115,9 @@ Live: **https://ai-secure-share-production.up.railway.app**
 
 ## AI skill
 
-See [`skill/share-knowledge/SKILL.md`](skill/share-knowledge/SKILL.md). Install:
+See [`skill/ai-response-share/SKILL.md`](skill/ai-response-share/SKILL.md). Install:
 ```bash
-ln -s "$(pwd)/skill/share-knowledge" ~/.claude/skills/share-knowledge
-export SHARE_KNOWLEDGE_URL=https://ai-secure-share-production.up.railway.app
+ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
+export AI_RESPONSE_SHARE_URL=https://airesponseshare.com
 ```
-Then: `python skill/share-knowledge/scripts/share.py create --content notes.md`
+Then: `python skill/ai-response-share/scripts/share.py create --content notes.md`

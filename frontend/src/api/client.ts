@@ -1,5 +1,5 @@
 /**
- * Typed wrapper around the ShareKnowledge HTTP API.
+ * Typed wrapper around the AI Response Share HTTP API.
  *
  * Uses same-origin "/api/..." paths by default (the dev server proxies these to
  * the backend; in production FastAPI serves both). Set VITE_API_BASE_URL to

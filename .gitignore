@@ -12,7 +12,7 @@ frontend/dist/
 backend/static/
 
 # Local manage-token store
-.share-knowledge/
+.ai-response-share/
 
 # Environment / OS
 .env
