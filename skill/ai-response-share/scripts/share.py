@@ -11,8 +11,10 @@ Three kinds of work:
 
 Manage tokens returned at creation are cached in ``~/.ai-response-share/tokens.json``
 (override the directory with ``$AI_RESPONSE_SHARE_HOME``) so later edits/deletes
-don't need the token passed explicitly. The API base URL comes from
-``$AI_RESPONSE_SHARE_URL`` (default ``http://localhost:8000``).
+don't need the token passed explicitly. The API base URL resolves ``--url`` >
+``$AI_RESPONSE_SHARE_URL`` > the hosted service ``https://airesponseshare.com``,
+so no configuration is needed unless targeting a local or self-hosted server
+(e.g. ``AI_RESPONSE_SHARE_URL=http://localhost:8000``).
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-DEFAULT_BASE_URL = "http://localhost:8000"
+DEFAULT_BASE_URL = "https://airesponseshare.com"
 TITLE_MAX_CHARS = 80
 _EXPIRY_PRESETS = {"1h": 3600, "1d": 86400, "7d": 604800, "30d": 2592000}
 _UNSET = object()
@@ -453,7 +455,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Save, read, recall, and manage AI Response Share markdown."
     )
-    parser.add_argument("--url", help="API base URL (default $AI_RESPONSE_SHARE_URL)")
+    parser.add_argument(
+        "--url",
+        help="API base URL (default: $AI_RESPONSE_SHARE_URL, else https://airesponseshare.com)",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     create = sub.add_parser("create", help="save content as a public share link")
