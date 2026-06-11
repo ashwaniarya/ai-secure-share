@@ -13,8 +13,10 @@ stdlib-only CLI in this skill's directory:
 python <this-skill-dir>/scripts/share.py <command>
 ```
 
-`$AI_RESPONSE_SHARE_URL` sets the API base URL. Run any command with `--help`
-for all flags.
+The API base URL defaults to the hosted service `https://airesponseshare.com` —
+no configuration needed. Set `$AI_RESPONSE_SHARE_URL` (or pass `--url`) only
+for local dev or self-hosting, e.g. `AI_RESPONSE_SHARE_URL=http://localhost:8000`.
+Run any command with `--help` for all flags.
 
 ## Intent → command
 
@@ -94,7 +96,6 @@ defaults.
 
 ```
 ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
-export AI_RESPONSE_SHARE_URL=https://airesponseshare.com
 ```
 
 ## Tests

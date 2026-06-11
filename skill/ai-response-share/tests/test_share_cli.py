@@ -53,6 +53,27 @@ def test_remove_token(tmp_path):
     assert share.lookup_token("abc", store_home=tmp_path) is None
 
 
+# ---- unit: base URL resolution (--url > env > production default) -----------
+
+def _parsed_args(*argv):
+    return share.build_parser().parse_args([*argv, "list"])
+
+
+def test_base_url_defaults_to_production_without_env(monkeypatch):
+    monkeypatch.delenv("AI_RESPONSE_SHARE_URL", raising=False)
+    assert share._base_url(_parsed_args()) == "https://airesponseshare.com"
+
+
+def test_base_url_env_overrides_default(monkeypatch):
+    monkeypatch.setenv("AI_RESPONSE_SHARE_URL", "http://localhost:8000")
+    assert share._base_url(_parsed_args()) == "http://localhost:8000"
+
+
+def test_base_url_flag_wins_over_env(monkeypatch):
+    monkeypatch.setenv("AI_RESPONSE_SHARE_URL", "http://localhost:8000")
+    assert share._base_url(_parsed_args("--url", "http://example.test")) == "http://example.test"
+
+
 # ---- integration: real round-trip against the FastAPI app -------------------
 
 def _free_port() -> int:

@@ -125,8 +125,7 @@ See [`skill/ai-response-share/SKILL.md`](skill/ai-response-share/SKILL.md).
 Install the ai-response-share Claude Code skill:
 1. Clone https://github.com/ashwaniarya/ai-secure-share (skip if I already have it locally).
 2. Symlink its skill/ai-response-share directory to ~/.claude/skills/ai-response-share.
-3. Persist AI_RESPONSE_SHARE_URL=https://airesponseshare.com in my shell profile.
-4. Verify the install with a create → read → delete round trip using
+3. Verify the install with a create → read → delete round trip using
    skill/ai-response-share/scripts/share.py, and show me the share URL it created.
 ```
 
@@ -135,8 +134,10 @@ Install the ai-response-share Claude Code skill:
 ```bash
 git clone https://github.com/ashwaniarya/ai-secure-share && cd ai-secure-share
 ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
-echo 'export AI_RESPONSE_SHARE_URL=https://airesponseshare.com' >> ~/.zshrc  # or your shell profile
 ```
+
+The skill talks to https://airesponseshare.com out of the box; self-hosters
+point it elsewhere with `AI_RESPONSE_SHARE_URL` (or `--url`).
 
 Restart your Claude Code session so the skill is discovered, then just ask —
 *"share this response as a link"*, *"remember this — no link"*, *"list my
