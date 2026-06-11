@@ -26,7 +26,9 @@ delete — no accounts. (AI responses are just markdown, so anything markdown wo
 - 🔒 Optional view password.
 - ⏱️ Optional expiry (1h / 1d / 7d / 30d / never).
 - ✏️ Edit and 🗑️ delete via a **manage token** shown once at creation.
-- 🤖 A Claude Code skill (`ai-response-share`) to drive the API from the CLI.
+- 🤖 A Claude Code skill (`ai-response-share`): save / read / recall from the
+  CLI — every save returns a public link by default, plus a local-only
+  `remember` mode (no link), `list`, and `recall` by title.
 - 🚦 Central per-IP rate limiting (slowapi) — tighter on create (spam) and unlock (brute-force).
 
 ## Architecture
@@ -115,9 +117,28 @@ Live: **https://airesponseshare.com**
 
 ## AI skill
 
-See [`skill/ai-response-share/SKILL.md`](skill/ai-response-share/SKILL.md). Install:
-```bash
-ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
-export AI_RESPONSE_SHARE_URL=https://airesponseshare.com
+See [`skill/ai-response-share/SKILL.md`](skill/ai-response-share/SKILL.md).
+
+🤖 **Install — copy-paste this prompt into Claude Code:**
+
+```text
+Install the ai-response-share Claude Code skill:
+1. Clone https://github.com/ashwaniarya/ai-secure-share (skip if I already have it locally).
+2. Symlink its skill/ai-response-share directory to ~/.claude/skills/ai-response-share.
+3. Persist AI_RESPONSE_SHARE_URL=https://airesponseshare.com in my shell profile.
+4. Verify the install with a create → read → delete round trip using
+   skill/ai-response-share/scripts/share.py, and show me the share URL it created.
 ```
-Then: `python skill/ai-response-share/scripts/share.py create --content notes.md`
+
+🔧 **Or install manually:**
+
+```bash
+git clone https://github.com/ashwaniarya/ai-secure-share && cd ai-secure-share
+ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
+echo 'export AI_RESPONSE_SHARE_URL=https://airesponseshare.com' >> ~/.zshrc  # or your shell profile
+```
+
+Restart your Claude Code session so the skill is discovered, then just ask —
+*"share this response as a link"*, *"remember this — no link"*, *"list my
+shares"*, *"recall what I saved about X"* — or drive the CLI directly:
+`python skill/ai-response-share/scripts/share.py create --content notes.md`

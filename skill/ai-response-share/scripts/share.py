@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""CLI for the AI Response Share API: create, read, update, and delete shares.
+"""CLI for AI Response Share: save, read, recall, and manage markdown.
 
 Standalone and stdlib-only so it can run anywhere without installing packages.
+Three kinds of work:
+
+- shares: public links via the HTTP API (``create``/``read``/``update``/``delete``)
+- memory: local-only items, no network (``remember``)
+- recall: a local index (``index.json``) of everything saved either way
+  (``list``/``recall``)
+
 Manage tokens returned at creation are cached in ``~/.ai-response-share/tokens.json``
-(override with ``$AI_RESPONSE_SHARE_HOME``) so later edits/deletes don't need the
-token passed explicitly. The API base URL comes from ``$AI_RESPONSE_SHARE_URL``
-(default ``http://localhost:8000``).
+(override the directory with ``$AI_RESPONSE_SHARE_HOME``) so later edits/deletes
+don't need the token passed explicitly. The API base URL comes from
+``$AI_RESPONSE_SHARE_URL`` (default ``http://localhost:8000``).
 """
 
 from __future__ import annotations
@@ -13,14 +20,18 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 DEFAULT_BASE_URL = "http://localhost:8000"
+TITLE_MAX_CHARS = 80
 _EXPIRY_PRESETS = {"1h": 3600, "1d": 86400, "7d": 604800, "30d": 2592000}
 _UNSET = object()
+_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class ApiError(Exception):
@@ -47,7 +58,45 @@ def parse_expiry(value) -> int | None:
     raise ValueError(f"invalid expiry: {value!r} (use never/1h/1d/7d/30d or seconds)")
 
 
-# ---- local manage-token store ----------------------------------------------
+# ---- titles and slugs -------------------------------------------------------
+
+def derive_title(content: str) -> str:
+    """First markdown heading, else first non-empty line, truncated for display."""
+    first_line = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            heading = stripped.lstrip("#").strip()
+            if heading:
+                return heading[:TITLE_MAX_CHARS]
+            continue
+        if first_line is None:
+            first_line = stripped
+    return (first_line or "Untitled")[:TITLE_MAX_CHARS]
+
+
+def extract_slug(value: str) -> str:
+    """Accept a bare slug/item id or any share URL and return the slug.
+
+    Handles full URLs, schemeless URLs, trailing slashes, query strings, and
+    fragments by taking the path segment after ``/s/``.
+    """
+    candidate = value.strip()
+    if _SLUG_RE.match(candidate):
+        return candidate
+    path = candidate.partition("?")[0].partition("#")[0]
+    segments = [segment for segment in path.split("/") if segment]
+    for position, segment in enumerate(segments):
+        if segment == "s" and position + 1 < len(segments):
+            slug = segments[position + 1]
+            if _SLUG_RE.match(slug):
+                return slug
+    raise ValueError(f"could not extract a share slug from {value!r}")
+
+
+# ---- local stores (manage tokens, index, memory files) ----------------------
 
 def _home(store_home=None) -> Path:
     if store_home is not None:
@@ -89,6 +138,61 @@ def remove_token(slug: str, store_home=None) -> None:
         _token_file(store_home).write_text(json.dumps(tokens, indent=2))
 
 
+def _index_file(store_home=None) -> Path:
+    return _home(store_home) / "index.json"
+
+
+def load_index(store_home=None) -> dict:
+    path = _index_file(store_home)
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+
+
+def _write_index(index: dict, store_home=None) -> None:
+    home = _home(store_home)
+    home.mkdir(parents=True, exist_ok=True)
+    _index_file(store_home).write_text(json.dumps(index, indent=2))
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _index_put(item_id: str, kind: str, title: str, url=None, store_home=None) -> None:
+    index = load_index(store_home)
+    previous = index.get(item_id, {})
+    entry = {
+        "kind": kind,
+        "title": title,
+        "created_at": previous.get("created_at") or _utc_now(),
+        "updated_at": _utc_now(),
+    }
+    resolved_url = url or previous.get("url")
+    if resolved_url:
+        entry["url"] = resolved_url
+    index[item_id] = entry
+    _write_index(index, store_home)
+
+
+def _index_remove(item_id: str, store_home=None) -> None:
+    index = load_index(store_home)
+    if item_id in index:
+        del index[item_id]
+        _write_index(index, store_home)
+
+
+def _memory_file(item_id: str, store_home=None) -> Path:
+    return _home(store_home) / "memory" / f"{item_id}.md"
+
+
+def _kind_of(item_id: str, store_home=None) -> str | None:
+    return load_index(store_home).get(item_id, {}).get("kind")
+
+
 # ---- HTTP -------------------------------------------------------------------
 
 def _request(method: str, url: str, data=None, token: str | None = None):
@@ -120,7 +224,7 @@ def _require_token(slug: str, token: str | None, store_home) -> str:
     return resolved
 
 
-# ---- operations -------------------------------------------------------------
+# ---- share operations (public links via the API) ----------------------------
 
 def create_share(
     base_url: str,
@@ -128,6 +232,7 @@ def create_share(
     *,
     password: str | None = None,
     expires=None,
+    title: str | None = None,
     store_home=None,
 ) -> dict:
     payload: dict = {"content": content}
@@ -138,6 +243,13 @@ def create_share(
         payload["expires_in_seconds"] = seconds
     _, data = _request("POST", f"{base_url}/api/shares", data=payload)
     save_token(data["slug"], data["manage_token"], store_home=store_home)
+    _index_put(
+        data["slug"],
+        "share",
+        title or derive_title(content),
+        url=data.get("url") or f"{base_url}/s/{data['slug']}",
+        store_home=store_home,
+    )
     return data
 
 
@@ -182,6 +294,21 @@ def update_share(
     _, data = _request(
         "PUT", f"{base_url}/api/shares/{slug}", data=patch, token=resolved
     )
+    # An explicitly supplied token that worked is worth keeping: it makes a
+    # share created elsewhere editable from this machine from now on.
+    if token:
+        save_token(slug, token, store_home=store_home)
+    if content is not _UNSET:
+        new_title = derive_title(content)
+    else:
+        new_title = load_index(store_home).get(slug, {}).get("title", "(untitled)")
+    _index_put(
+        slug,
+        "share",
+        new_title,
+        url=(data or {}).get("url") or f"{base_url}/s/{slug}",
+        store_home=store_home,
+    )
     return data
 
 
@@ -195,6 +322,104 @@ def delete_share(
     resolved = _require_token(slug, token, store_home)
     _request("DELETE", f"{base_url}/api/shares/{slug}", token=resolved)
     remove_token(slug, store_home=store_home)
+    _index_remove(slug, store_home=store_home)
+
+
+# ---- memory operations (local-only, no network) ------------------------------
+
+def _slugify(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    return slug or "memory"
+
+
+def _unique_memory_id(title: str, store_home=None) -> str:
+    """Slugified title, suffixed if it would collide with any known id or slug."""
+    base = _slugify(title)
+    taken = set(load_index(store_home)) | set(load_tokens(store_home))
+    if base not in taken:
+        return base
+    suffix = 2
+    while f"{base}-{suffix}" in taken:
+        suffix += 1
+    return f"{base}-{suffix}"
+
+
+def remember(content: str, *, title: str | None = None, store_home=None) -> dict:
+    """Persist content locally (no public link) and index it for recall."""
+    resolved_title = title or derive_title(content)
+    item_id = _unique_memory_id(resolved_title, store_home)
+    path = _memory_file(item_id, store_home)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content)
+    _index_put(item_id, "memory", resolved_title, store_home=store_home)
+    return {"id": item_id, "title": resolved_title, "path": str(path)}
+
+
+def update_memory(item_id: str, *, content=_UNSET, store_home=None) -> None:
+    index = load_index(store_home)
+    if index.get(item_id, {}).get("kind") != "memory":
+        raise ValueError(f"no memory item '{item_id}'")
+    title = index[item_id]["title"]
+    if content is not _UNSET:
+        _memory_file(item_id, store_home).write_text(content)
+        title = derive_title(content)
+    _index_put(item_id, "memory", title, store_home=store_home)
+
+
+def delete_memory(item_id: str, store_home=None) -> None:
+    path = _memory_file(item_id, store_home)
+    if path.exists():
+        path.unlink()
+    _index_remove(item_id, store_home=store_home)
+
+
+# ---- listing and recall ------------------------------------------------------
+
+def list_items(store_home=None) -> list[dict]:
+    """Every saved item (shares and memory), most recently updated first.
+
+    Shares known only from the legacy token cache appear as untitled rows.
+    """
+    index = load_index(store_home)
+    items = []
+    for item_id, entry in index.items():
+        item = {"id": item_id, **entry}
+        if entry.get("kind") == "memory":
+            item["path"] = str(_memory_file(item_id, store_home))
+        items.append(item)
+    for slug in load_tokens(store_home):
+        if slug not in index:
+            items.append(
+                {
+                    "id": slug,
+                    "kind": "share",
+                    "title": "(untitled)",
+                    "created_at": "",
+                    "updated_at": "",
+                }
+            )
+    items.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
+    return items
+
+
+def find_items(query: str, store_home=None) -> list[dict]:
+    """Tiered match: exact id, else exact title, else title substring.
+
+    Only the highest non-empty tier is returned, so an exact hit never gets
+    diluted by looser matches.
+    """
+    items = list_items(store_home)
+    needle = query.strip().casefold()
+    tiers = (
+        lambda item: item["id"].casefold() == needle,
+        lambda item: item.get("title", "").casefold() == needle,
+        lambda item: needle in item.get("title", "").casefold(),
+    )
+    for matches_tier in tiers:
+        matches = [item for item in items if matches_tier(item)]
+        if matches:
+            return matches
+    return []
 
 
 # ---- CLI --------------------------------------------------------------------
@@ -213,30 +438,58 @@ def _base_url(args) -> str:
     return args.url or os.environ.get("AI_RESPONSE_SHARE_URL", DEFAULT_BASE_URL)
 
 
+def _print_items(items: list[dict], stream) -> None:
+    for item in items:
+        date = (item.get("updated_at") or "")[:10]
+        location = item.get("url") or item.get("path") or ""
+        print(
+            f"{item['kind']:<7} {item['id']:<28} {date:<11} "
+            f"{item.get('title', ''):<42} {location}",
+            file=stream,
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage AI Response Share shares.")
+    parser = argparse.ArgumentParser(
+        description="Save, read, recall, and manage AI Response Share markdown."
+    )
     parser.add_argument("--url", help="API base URL (default $AI_RESPONSE_SHARE_URL)")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    create = sub.add_parser("create", help="create a share")
+    create = sub.add_parser("create", help="save content as a public share link")
     create.add_argument("--content", required=True, help="markdown, a file path, or - for stdin")
+    create.add_argument("--title", help="override the auto-derived title")
     create.add_argument("--password")
     create.add_argument("--expires", help="never/1h/1d/7d/30d or seconds")
 
-    read = sub.add_parser("read", help="read a share's content")
-    read.add_argument("slug")
+    remember_cmd = sub.add_parser(
+        "remember", help="save content locally only (no public link)"
+    )
+    remember_cmd.add_argument(
+        "--content", required=True, help="markdown, a file path, or - for stdin"
+    )
+    remember_cmd.add_argument("--title", help="override the auto-derived title")
+
+    sub.add_parser("list", help="list everything saved (shares and memory)")
+
+    recall = sub.add_parser("recall", help="find a saved item by id or title and print it")
+    recall.add_argument("query", help="item id, exact title, or title fragment")
+    recall.add_argument("--password", help="for password-protected shares")
+
+    read = sub.add_parser("read", help="read a share or memory item")
+    read.add_argument("slug", help="share slug, share URL, or saved item id")
     read.add_argument("--password")
     read.add_argument("--token")
 
-    update = sub.add_parser("update", help="update a share")
-    update.add_argument("slug")
+    update = sub.add_parser("update", help="update a share or memory item")
+    update.add_argument("slug", help="share slug, share URL, or saved item id")
     update.add_argument("--content", help="markdown, a file path, or - for stdin")
     update.add_argument("--password")
     update.add_argument("--expires")
     update.add_argument("--token")
 
-    delete = sub.add_parser("delete", help="delete a share")
-    delete.add_argument("slug")
+    delete = sub.add_parser("delete", help="delete a share or memory item")
+    delete.add_argument("slug", help="share slug, share URL, or saved item id")
     delete.add_argument("--token")
     return parser
 
@@ -251,27 +504,74 @@ def main(argv=None) -> int:
                 _read_content(args.content),
                 password=args.password,
                 expires=args.expires,
+                title=args.title,
             )
             print(f"slug:         {result['slug']}")
             print(f"view url:     {result['url']}")
             print(f"manage token: {result['manage_token']}")
             print("(save the manage token — it is shown only once)")
+        elif args.command == "remember":
+            result = remember(_read_content(args.content), title=args.title)
+            print(f"remembered:   {result['id']}")
+            print(f"title:        {result['title']}")
+            print(f"path:         {result['path']}")
+        elif args.command == "list":
+            items = list_items()
+            if not items:
+                print("no saved items")
+            else:
+                _print_items(items, sys.stdout)
+        elif args.command == "recall":
+            matches = find_items(args.query)
+            if not matches:
+                print(f"error: no saved item matches {args.query!r}", file=sys.stderr)
+                return 1
+            if len(matches) > 1:
+                print("multiple saved items match — pick one:", file=sys.stderr)
+                _print_items(matches, sys.stderr)
+                return 2
+            item = matches[0]
+            if item["kind"] == "memory":
+                print(_memory_file(item["id"]).read_text())
+            else:
+                print(read_share(base_url, item["id"], password=args.password))
         elif args.command == "read":
-            print(read_share(base_url, args.slug, password=args.password, token=args.token))
+            ref = extract_slug(args.slug)
+            if _kind_of(ref) == "memory":
+                print(_memory_file(ref).read_text())
+            else:
+                print(read_share(base_url, ref, password=args.password, token=args.token))
         elif args.command == "update":
-            kwargs: dict = {"token": args.token}
-            if args.content is not None:
-                kwargs["content"] = _read_content(args.content)
-            if args.password is not None:
-                kwargs["password"] = args.password
-            if args.expires is not None:
-                kwargs["expires"] = args.expires
-            update_share(base_url, args.slug, **kwargs)
-            print(f"updated {args.slug}")
+            ref = extract_slug(args.slug)
+            if _kind_of(ref) == "memory":
+                if args.password is not None or args.expires is not None:
+                    print(
+                        "error: memory items don't support --password/--expires",
+                        file=sys.stderr,
+                    )
+                    return 1
+                kwargs: dict = {}
+                if args.content is not None:
+                    kwargs["content"] = _read_content(args.content)
+                update_memory(ref, **kwargs)
+            else:
+                kwargs = {"token": args.token}
+                if args.content is not None:
+                    kwargs["content"] = _read_content(args.content)
+                if args.password is not None:
+                    kwargs["password"] = args.password
+                if args.expires is not None:
+                    kwargs["expires"] = args.expires
+                update_share(base_url, ref, **kwargs)
+            print(f"updated {ref}")
         elif args.command == "delete":
-            delete_share(base_url, args.slug, token=args.token)
-            print(f"deleted {args.slug}")
-    except ApiError as error:
+            ref = extract_slug(args.slug)
+            if _kind_of(ref) == "memory":
+                delete_memory(ref)
+            else:
+                delete_share(base_url, ref, token=args.token)
+            print(f"deleted {ref}")
+    except (ApiError, ValueError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     return 0
