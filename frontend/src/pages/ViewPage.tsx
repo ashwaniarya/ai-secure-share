@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, getShare, unlockShare } from "../api/client";
 import MarkdownPreview from "../components/MarkdownPreview";
+import ViewQuickActions from "../components/ViewQuickActions";
 
 type Status =
   | "loading"
@@ -103,6 +104,7 @@ export default function ViewPage() {
       <p className="muted">
         <Link to={`/s/${slug}/manage`}>Manage this share</Link>
       </p>
+      <ViewQuickActions />
     </article>
   );
 }

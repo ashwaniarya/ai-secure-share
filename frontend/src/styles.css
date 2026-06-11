@@ -182,6 +182,16 @@ button.danger {
   padding: 1rem 1.25rem;
   background: #fcfdff;
   overflow-wrap: anywhere;
+  /* reader-controlled zoom; headings below use em so they track the scale */
+  font-size: calc(1rem * var(--view-font-scale, 1));
+}
+
+.markdown-preview h1 {
+  font-size: 1.6em;
+}
+
+.markdown-preview h2 {
+  font-size: 1.05em;
 }
 
 .markdown-preview :first-child {
@@ -215,4 +225,106 @@ button.danger {
   margin-left: 0;
   padding-left: 1rem;
   color: var(--muted);
+}
+
+/* ---- view quick actions (floating reader controls, bottom-right) -------- */
+
+.quick-actions {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px -18px rgba(15, 23, 42, 0.35);
+}
+
+.quick-actions button {
+  position: relative;
+  align-self: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.quick-actions button:hover:not(:disabled) {
+  background: #eef2ff;
+  color: var(--accent);
+}
+
+.quick-actions button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.quick-actions button[aria-pressed="true"] {
+  background: #eef2ff;
+  color: var(--accent);
+}
+
+.quick-actions-divider {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.15rem;
+  background: var(--border);
+}
+
+/* CSS-only tooltips, shown on hover and keyboard focus */
+.quick-actions button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 0.55rem);
+  right: 0;
+  white-space: nowrap;
+  background: var(--text);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.quick-actions button:hover::after,
+.quick-actions button:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* full-width reading mode (body class set by ViewQuickActions): margins gone
+   and chrome slimmed — the markdown reads like a document, not a boxed preview */
+body.view-full .app {
+  max-width: none;
+  padding: 1rem 0 4rem;
+}
+
+body.view-full .card {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  padding: 1.25rem 1.5rem;
+}
+
+body.view-full .markdown-preview {
+  border: none;
+  background: transparent;
+  padding: 0;
 }

@@ -10,7 +10,10 @@ vi.mock("../../api/client", async (importOriginal) => {
   return { ...actual, getShare: vi.fn(), unlockShare: vi.fn() };
 });
 
-afterEach(() => vi.resetAllMocks());
+afterEach(() => {
+  vi.resetAllMocks();
+  localStorage.clear();
+});
 
 const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
 
@@ -41,6 +44,24 @@ test("renders public markdown content", async () => {
   expect(
     await screen.findByRole("heading", { name: "Public Doc" }),
   ).toBeInTheDocument();
+});
+
+test("shows the view quick actions once content is ready", async () => {
+  vi.mocked(client.getShare).mockResolvedValue(PUBLIC_VIEW);
+  renderAt();
+  await screen.findByRole("heading", { name: "Public Doc" });
+  expect(
+    screen.getByRole("group", { name: "View options" }),
+  ).toBeInTheDocument();
+});
+
+test("hides the view quick actions while password-locked", async () => {
+  vi.mocked(client.getShare).mockResolvedValue(LOCKED_VIEW);
+  renderAt();
+  await screen.findByLabelText(/password/i);
+  expect(
+    screen.queryByRole("group", { name: "View options" }),
+  ).not.toBeInTheDocument();
 });
 
 test("shows a not-found message on 404", async () => {
