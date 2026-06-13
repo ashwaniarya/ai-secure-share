@@ -25,3 +25,23 @@ if (typeof window !== "undefined" && !window.localStorage) {
     configurable: true,
   });
 }
+
+// jsdom has no matchMedia; default to "motion allowed". Tests that exercise the
+// reduced-motion path override window.matchMedia themselves.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    configurable: true,
+    value: (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList,
+  });
+}

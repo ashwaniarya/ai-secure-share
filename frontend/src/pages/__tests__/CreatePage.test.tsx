@@ -85,3 +85,10 @@ test("shows an error message when creation fails", async () => {
 
   expect(await screen.findByText(/server exploded/i)).toBeInTheDocument();
 });
+
+test("marks the body for home-page styling while mounted", () => {
+  const { unmount } = renderPage();
+  expect(document.body.classList.contains("home")).toBe(true);
+  unmount();
+  expect(document.body.classList.contains("home")).toBe(false);
+});
