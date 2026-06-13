@@ -307,6 +307,16 @@ def test_list_includes_tokens_only_share_untitled(tmp_path):
     assert len(items) == 1
     assert items[0]["id"] == "legacysl"
     assert items[0]["kind"] == "share"
+    # No base_url given: recall path is unaffected, no link constructed.
+    assert not items[0].get("url")
+
+
+def test_list_constructs_fallback_url_for_tokens_only_share(tmp_path):
+    share.save_token("legacysl", "tok", store_home=tmp_path)
+    items = share.list_items(
+        base_url="https://airesponseshare.com", store_home=tmp_path
+    )
+    assert items[0]["url"] == "https://airesponseshare.com/s/legacysl"
 
 
 def test_list_items_sorted_most_recent_first(tmp_path):
