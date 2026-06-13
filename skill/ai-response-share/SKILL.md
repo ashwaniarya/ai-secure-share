@@ -61,7 +61,11 @@ No operation is gated — every command is always available.
   short question offering those options.
 - `recall` exit 1 → nothing matched; say so and offer `list`.
 - `list` shows everything saved (kind, id, date, title, link/path), newest
-  first, including shares created before the index existed (untitled).
+  first. Present it back to the user as a compact table with columns
+  **kind · id · date · title · link**.
+- Shares created before the index existed appear untitled, but `list` still
+  prints a constructed `…/s/<slug>` link for them — show that link and note it
+  opens with `read <slug>`.
 
 ## Ambiguity (ask only when genuinely needed)
 
@@ -84,7 +88,8 @@ defaults.
 - Save: the link plainly on its own line + one line confirming what was saved
   (mention the manage token is shown once).
 - Read / recall: display the content.
-- Memory, list, update, delete: one concise confirmation line.
+- List: a compact table (kind · id · date · title · link), newest first.
+- Memory, update, delete: one concise confirmation line.
 
 ## Local store
 

@@ -377,10 +377,12 @@ def delete_memory(item_id: str, store_home=None) -> None:
 
 # ---- listing and recall ------------------------------------------------------
 
-def list_items(store_home=None) -> list[dict]:
+def list_items(base_url=None, store_home=None) -> list[dict]:
     """Every saved item (shares and memory), most recently updated first.
 
-    Shares known only from the legacy token cache appear as untitled rows.
+    Shares known only from the legacy token cache appear as untitled rows. When
+    ``base_url`` is given, those rows still get a constructed view link so the
+    listing always shows where to open the share.
     """
     index = load_index(store_home)
     items = []
@@ -398,6 +400,7 @@ def list_items(store_home=None) -> list[dict]:
                     "title": "(untitled)",
                     "created_at": "",
                     "updated_at": "",
+                    "url": f"{base_url}/s/{slug}" if base_url else "",
                 }
             )
     items.sort(key=lambda item: item.get("updated_at") or "", reverse=True)
@@ -410,7 +413,7 @@ def find_items(query: str, store_home=None) -> list[dict]:
     Only the highest non-empty tier is returned, so an exact hit never gets
     diluted by looser matches.
     """
-    items = list_items(store_home)
+    items = list_items(store_home=store_home)
     needle = query.strip().casefold()
     tiers = (
         lambda item: item["id"].casefold() == needle,
@@ -521,7 +524,7 @@ def main(argv=None) -> int:
             print(f"title:        {result['title']}")
             print(f"path:         {result['path']}")
         elif args.command == "list":
-            items = list_items()
+            items = list_items(base_url)
             if not items:
                 print("no saved items")
             else:
