@@ -1,27 +1,28 @@
 :root {
-  --bg: #0f172a;
+  /* white + black + bottle-green — indigo removed everywhere */
+  --bg: #faf9f6;
   --surface: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --text: #0b0b0c;
+  --muted: #5b6660;
+  --border: #e6e6e0;
+  --accent: #0b6e4f;
+  --accent-hover: #095a40;
+  --accent-strong: #095a40;
+  --accent-soft: #e7f1ec;
   --danger: #dc2626;
   --warning-bg: #fffbeb;
   --warning-border: #fcd34d;
   --success: #047857;
   --radius: 12px;
-  /* landing (route "/") — expressive type + bold-modern depth */
+  --radius-lg: 20px;
   --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas,
     monospace;
-  --accent-2: #7c3aed;
-  --radius-lg: 20px;
-  --term-bg: #0b1020;
-  --term-fg: #e2e8f0;
-  --term-prompt: #4ade80;
-  --term-accent: #38bdf8;
-  --shadow-lg: 0 24px 60px -28px rgba(15, 23, 42, 0.45);
+  /* dark composer (landing centerpiece) */
+  --composer-bg: #0b0b0c;
+  --composer-fg: #f4f4f0;
+  --composer-chip: #1f8f66;
+  --shadow-lg: 0 24px 60px -28px rgba(11, 11, 12, 0.4);
 }
 
 * {
@@ -33,8 +34,12 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
   color: var(--text);
-  background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 45%, #ffffff 100%);
+  background: var(--bg);
   min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
 }
 
 .app {
@@ -357,16 +362,11 @@ body.view-full .markdown-preview {
 body.home {
   background:
     radial-gradient(
-      1100px 560px at 50% -8%,
-      rgba(79, 70, 229, 0.14),
-      transparent 62%
+      1100px 560px at 50% -6%,
+      rgba(11, 110, 79, 0.1),
+      transparent 60%
     ),
-    radial-gradient(
-      900px 520px at 100% 0%,
-      rgba(56, 189, 248, 0.12),
-      transparent 55%
-    ),
-    linear-gradient(160deg, #eef2ff 0%, #f8fafc 45%, #ffffff 100%);
+    var(--bg);
 }
 
 body.home .app {
@@ -461,90 +461,100 @@ body.home .app {
   color: var(--muted);
 }
 
-/* skill command demo */
-.skill-demo {
+/* agent composer (landing centerpiece) */
+.composer {
   width: 100%;
   max-width: 660px;
-  padding: 1rem 1.15rem 1.2rem;
-  text-align: left;
-  background: var(--term-bg);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-.skill-demo-bar {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
-}
-
-.skill-demo-bar span {
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 999px;
-  background: #334155;
-}
-
-.skill-demo-bar span:nth-child(1) {
-  background: #f87171;
-}
-.skill-demo-bar span:nth-child(2) {
-  background: #fbbf24;
-}
-.skill-demo-bar span:nth-child(3) {
-  background: #34d399;
-}
-
-.skill-demo-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 0.55ch;
-  font-family: var(--font-mono);
-  font-size: clamp(0.82rem, 1.8vw, 1rem);
-  line-height: 1.6;
-  color: var(--term-fg);
-}
-
-.skill-demo-prompt {
-  color: var(--term-prompt);
-  font-weight: 700;
-}
-
-.skill-demo-cmd {
-  color: var(--term-accent);
-  font-weight: 500;
-}
-
-.skill-demo-cursor {
-  display: inline-block;
-  width: 0.55ch;
-  height: 1.05em;
-  translate: 0 0.16em;
-  background: var(--term-prompt);
-  animation: demo-blink 1.05s steps(2, start) infinite;
-}
-
-.skill-demo-list {
-  margin: 0.9rem 0 0;
-  padding: 0.9rem 0 0;
-  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border-top: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 0.8rem 0.8rem 1rem;
+  text-align: left;
+  background: var(--composer-bg);
+  border: 1px solid #1d1d20;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.composer-chip {
+  flex: none;
+  padding: 0.25rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(31, 143, 102, 0.16);
+  color: var(--composer-chip);
   font-family: var(--font-mono);
   font-size: 0.82rem;
-  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.skill-demo-list .skill-demo-cmd {
-  margin-left: 0.4ch;
+.composer-task {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(0.82rem, 1.7vw, 0.98rem);
+  color: var(--composer-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@keyframes demo-blink {
+.composer-caret {
+  flex: none;
+  width: 0.5ch;
+  height: 1.05em;
+  margin-left: -0.3ch;
+  background: var(--composer-chip);
+  animation: composer-blink 1.05s steps(2, start) infinite;
+}
+
+.composer-send {
+  flex: none;
+  align-self: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.composer-send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.composer-hint {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.composer-examples {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@keyframes composer-blink {
   0%,
   50% {
     opacity: 1;
@@ -571,17 +581,18 @@ body.home .app {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1rem;
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
-  box-shadow: 0 12px 30px -12px rgba(79, 70, 229, 0.6);
+  background: var(--accent);
+  box-shadow: 0 12px 30px -14px rgba(11, 110, 79, 0.55);
   transition:
     transform 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    background 0.15s ease;
 }
 
 .cta-primary:hover:not(:disabled) {
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 18px 40px -14px rgba(79, 70, 229, 0.7);
+  box-shadow: 0 18px 40px -16px rgba(11, 110, 79, 0.65);
 }
 
 .cta-ghost {
@@ -615,13 +626,12 @@ body.home .app {
 .chip {
   padding: 0.4rem 0.8rem;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(6px);
+  border: 1px solid var(--accent-soft);
+  background: var(--surface);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 500;
-  color: #334155;
+  color: var(--text);
 }
 
 /* secondary create tool */
@@ -764,14 +774,17 @@ body.home .app {
 .home .hero-sub {
   animation-delay: 0.12s;
 }
-.home .skill-demo {
+.home .composer {
   animation-delay: 0.18s;
 }
 .home .install-cta {
   animation-delay: 0.24s;
 }
+.home .agents-row {
+  animation-delay: 0.28s;
+}
 .home .chips {
-  animation-delay: 0.3s;
+  animation-delay: 0.32s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -779,10 +792,99 @@ body.home .app {
   .home .hero > * {
     animation: none;
   }
-  .skill-demo-cursor {
+  .composer-caret {
     animation: none;
   }
   .cta-primary {
     transition: none;
+  }
+}
+
+/* agents row */
+.agents-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.agents-row .agents-label {
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.agents-row .agent {
+  position: relative;
+  color: var(--text);
+}
+
+.agents-row .agent + .agent::before,
+.agents-row .agent-muted::before {
+  content: "·";
+  margin-right: 0.55rem;
+  color: var(--border);
+}
+
+.agents-row .agent-primary {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.agents-row .agent-muted {
+  color: var(--muted);
+}
+
+/* install panel (revealed by the composer send / CTA) */
+.install-panel {
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 1.1rem 1.2rem 1.25rem;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 40px -26px rgba(11, 11, 12, 0.4);
+  animation: fade-up 0.3s ease both;
+}
+
+.install-panel-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.install-prompt {
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 1rem;
+  background: var(--composer-bg);
+  color: var(--composer-fg);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.install-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .install-panel {
+    animation: none;
   }
 }

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import SkillCommandDemo from "./SkillCommandDemo";
+import AgentComposerDemo from "./AgentComposerDemo";
+import InstallPanel from "./InstallPanel";
 import { copyToClipboard } from "../lib/clipboard";
-import { GITHUB_URL, INSTALL_PROMPT } from "../lib/skill";
+import { AGENTS, GITHUB_URL, INSTALL_PROMPT } from "../lib/skill";
 
 const CHIPS = [
   "🛡 XSS-safe",
@@ -10,12 +11,13 @@ const CHIPS = [
   "🔗 Rich link previews",
 ];
 
-/** Landing hero: brand, headline, the rolling skill demo, and the install CTA. */
+/** Landing hero: brand, agent-first headline, the composer, and the install panel. */
 export default function Hero() {
-  const [copied, setCopied] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
 
-  async function handleInstall() {
-    setCopied(await copyToClipboard(INSTALL_PROMPT));
+  async function revealInstall() {
+    setShowInstall(true);
+    await copyToClipboard(INSTALL_PROMPT);
   }
 
   return (
@@ -39,19 +41,21 @@ export default function Hero() {
         <h1 className="hero-title">
           Turn any AI response into a{" "}
           <span className="hero-accent">shareable link</span>.
-          <span className="hero-kicker">Right from Claude Code.</span>
+          <span className="hero-kicker">From your AI agent.</span>
         </h1>
         <p className="hero-sub">
-          The <code>/ai-response-share</code> skill turns any answer into a
-          clean, rendered link — without leaving your terminal. Or paste
-          markdown below.
+          Ask your AI agent to share any answer — get a clean, rendered link
+          back. First-class in Claude Code, or from any agent via the CLI.
+          Prefer the web? Paste below.
         </p>
 
-        <SkillCommandDemo />
+        <AgentComposerDemo onSend={revealInstall} />
+
+        {showInstall && <InstallPanel />}
 
         <div className="install-cta">
-          <button type="button" className="cta-primary" onClick={handleInstall}>
-            {copied ? "Copied — paste into Claude Code" : "Add to Claude Code"}
+          <button type="button" className="cta-primary" onClick={revealInstall}>
+            Add to Claude Code
           </button>
           <a
             className="cta-ghost"
@@ -59,9 +63,22 @@ export default function Hero() {
             target="_blank"
             rel="noreferrer"
           >
-            How it works ↗
+            Using another agent? →
           </a>
         </div>
+
+        <p className="agents-row">
+          <span className="agents-label">Works in</span>
+          {AGENTS.map((agent, index) => (
+            <span
+              key={agent}
+              className={`agent${index === 0 ? " agent-primary" : ""}`}
+            >
+              {agent}
+            </span>
+          ))}
+          <span className="agent agent-muted">+ any agent via CLI</span>
+        </p>
 
         <ul className="chips">
           {CHIPS.map((chip) => (

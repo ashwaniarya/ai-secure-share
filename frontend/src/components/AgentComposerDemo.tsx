@@ -7,18 +7,21 @@ const DELETE_MS = 28;
 const HOLD_MS = 1500;
 const GAP_MS = 350;
 
-interface SkillCommandDemoProps {
+interface AgentComposerDemoProps {
   examples?: string[];
+  /** Fired when the send affordance is clicked (reveals install instructions). */
+  onSend?: () => void;
 }
 
 /**
- * Terminal-styled hero centerpiece. Rolls through example `/ai-response-share`
- * requests with a typewriter effect; under reduced-motion it renders the
- * examples statically instead of animating.
+ * AI-agent composer mock: a clean prompt bar that rolls through example
+ * `/ai-response-share` requests with a typewriter effect and a send button.
+ * Under reduced motion it renders the examples statically.
  */
-export default function SkillCommandDemo({
+export default function AgentComposerDemo({
   examples = SKILL_EXAMPLES,
-}: SkillCommandDemoProps) {
+  onSend,
+}: AgentComposerDemoProps) {
   const reduced = usePrefersReducedMotion();
   const [display, setDisplay] = useState(reduced ? examples[0] : "");
   const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -69,32 +72,34 @@ export default function SkillCommandDemo({
   }, [reduced, examples]);
 
   return (
-    <div className="skill-demo">
-      <div className="skill-demo-bar" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <div className="skill-demo-line" aria-hidden="true">
-        <span className="skill-demo-prompt">❯</span>
-        <span className="skill-demo-cmd">/ai-response-share</span>
-        <span className="skill-demo-task" data-testid="skill-demo-task">
+    <div className="composer">
+      <div className="composer-bar">
+        <span className="composer-chip">/ai-response-share</span>
+        <span className="composer-task" data-testid="composer-task">
           {display}
         </span>
-        <span className="skill-demo-cursor" />
+        <span className="composer-caret" aria-hidden="true" />
+        <button
+          type="button"
+          className="composer-send"
+          aria-label="Show install instructions"
+          onClick={onSend}
+        >
+          →
+        </button>
       </div>
+      <p className="composer-hint" aria-hidden="true">
+        Press → to add it to your agent
+      </p>
       {reduced && (
-        <ul className="skill-demo-list" aria-hidden="true">
+        <ul className="composer-examples" aria-hidden="true">
           {examples.slice(1, 4).map((example) => (
-            <li key={example}>
-              <span className="skill-demo-prompt">❯</span>
-              <span className="skill-demo-cmd">/ai-response-share</span> {example}
-            </li>
+            <li key={example}>{example}</li>
           ))}
         </ul>
       )}
       <p className="sr-only">
-        Use the /ai-response-share skill in Claude Code — for example, “
+        Use the /ai-response-share skill in your AI agent — for example, “
         {examples[0]}”.
       </p>
     </div>
