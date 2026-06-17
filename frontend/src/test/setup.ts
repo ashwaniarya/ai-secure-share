@@ -26,6 +26,21 @@ if (typeof window !== "undefined" && !window.localStorage) {
   });
 }
 
+// jsdom has no ResizeObserver, which react-zoom-pan-pinch (used by
+// MermaidDiagram) instantiates on mount. A no-op shim is enough for tests; the
+// guard keeps it inert wherever a real implementation exists.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  class ResizeObserverShim {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    value: ResizeObserverShim,
+    configurable: true,
+  });
+}
+
 // jsdom has no matchMedia; default to "motion allowed". Tests that exercise the
 // reduced-motion path override window.matchMedia themselves.
 if (typeof window !== "undefined" && !window.matchMedia) {
