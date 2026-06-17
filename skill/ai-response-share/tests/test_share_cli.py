@@ -6,11 +6,23 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import json
+
 import pytest
 
+import crypto
 import share
 
 BACKEND_DIR = Path(__file__).resolve().parents[3] / "backend"
+
+
+def _raw_get_content(base_url: str, slug: str) -> str:
+    """Fetch the share's stored content straight from the API, no decryption.
+
+    Used to prove what the server actually persists (ciphertext vs plaintext).
+    """
+    with urllib.request.urlopen(f"{base_url}/api/shares/{slug}") as response:
+        return json.loads(response.read())["content"]
 
 
 # ---- unit: expiry parsing ---------------------------------------------------
@@ -123,7 +135,7 @@ def server(tmp_path_factory):
 
 
 def test_create_read_update_delete_roundtrip(server, tmp_path):
-    created = share.create_share(server, "# Hello", store_home=tmp_path)
+    created = share.create_share(server, "# Hello", encrypt=False, store_home=tmp_path)
     slug = created["slug"]
     assert created["manage_token"]
 
@@ -143,7 +155,7 @@ def test_create_read_update_delete_roundtrip(server, tmp_path):
 
 def test_password_protected_read_requires_password(server, tmp_path):
     created = share.create_share(
-        server, "secret body", password="pw", store_home=tmp_path
+        server, "secret body", password="pw", encrypt=False, store_home=tmp_path
     )
     slug = created["slug"]
 
@@ -332,7 +344,9 @@ def test_create_indexes_share_and_recall_reads_via_api(
     server, tmp_path, monkeypatch, capsys
 ):
     monkeypatch.setenv("AI_RESPONSE_SHARE_HOME", str(tmp_path))
-    created = share.create_share(server, "# Api Hello\n\nhi", store_home=tmp_path)
+    created = share.create_share(
+        server, "# Api Hello\n\nhi", encrypt=False, store_home=tmp_path
+    )
     slug = created["slug"]
 
     entry = share.load_index(store_home=tmp_path)[slug]
@@ -349,7 +363,9 @@ def test_create_indexes_share_and_recall_reads_via_api(
 
 def test_read_via_main_accepts_full_url(server, tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("AI_RESPONSE_SHARE_HOME", str(tmp_path))
-    created = share.create_share(server, "url read body", store_home=tmp_path)
+    created = share.create_share(
+        server, "url read body", encrypt=False, store_home=tmp_path
+    )
 
     url = f"{server}/s/{created['slug']}"
     assert share.main(["--url", server, "read", url]) == 0
@@ -359,7 +375,9 @@ def test_read_via_main_accepts_full_url(server, tmp_path, monkeypatch, capsys):
 def test_token_supplied_update_caches_token_and_indexes(server, tmp_path):
     creator_home = tmp_path / "creator"
     receiver_home = tmp_path / "receiver"
-    created = share.create_share(server, "# Shared Doc\n\nv1", store_home=creator_home)
+    created = share.create_share(
+        server, "# Shared Doc\n\nv1", encrypt=False, store_home=creator_home
+    )
     slug, token = created["slug"], created["manage_token"]
 
     # the receiver machine knows nothing about this share yet
@@ -373,3 +391,82 @@ def test_token_supplied_update_caches_token_and_indexes(server, tmp_path):
     share.delete_share(server, slug, store_home=receiver_home)
     with pytest.raises(share.ApiError):
         share.read_share(server, slug)
+
+
+# ---- unit: encryption key store ---------------------------------------------
+
+def test_keys_store_roundtrip(tmp_path):
+    share.save_key("abc", "KEYVAL", store_home=tmp_path)
+    assert share.lookup_key("abc", store_home=tmp_path) == "KEYVAL"
+    share.remove_key("abc", store_home=tmp_path)
+    assert share.lookup_key("abc", store_home=tmp_path) is None
+
+
+def test_extract_key_from_url():
+    assert crypto.extract_key_from_url("http://x/s/abc#k=KEYVAL") == "KEYVAL"
+    assert crypto.extract_key_from_url("http://x/s/abc") is None
+
+
+# ---- integration: end-to-end encryption against the real API ----------------
+
+def test_encrypted_create_read_roundtrip(server, tmp_path):
+    created = share.create_share(server, "# Secret\nhi", store_home=tmp_path)
+    slug = created["slug"]
+    assert "#k=" in created["url"]
+
+    # the server only ever sees ciphertext
+    assert _raw_get_content(server, slug).startswith("arsenc.")
+
+    # cached key lets a read by slug decrypt transparently
+    assert share.read_share(server, slug, store_home=tmp_path) == "# Secret\nhi"
+
+    # a fresh machine with no cached key can still decrypt using the URL key
+    fresh_home = tmp_path / "fresh"
+    key_from_url = crypto.extract_key_from_url(created["url"])
+    assert (
+        share.read_share(server, slug, key=key_from_url, store_home=fresh_home)
+        == "# Secret\nhi"
+    )
+
+
+def test_encrypted_with_password(server, tmp_path):
+    created = share.create_share(
+        server, "# Locked\ntop secret", password="pw", store_home=tmp_path
+    )
+    slug = created["slug"]
+
+    with pytest.raises(share.ApiError):
+        share.read_share(server, slug, store_home=tmp_path)  # no password
+
+    assert (
+        share.read_share(server, slug, password="pw", store_home=tmp_path)
+        == "# Locked\ntop secret"
+    )
+
+
+def test_encrypted_update_reencrypts(server, tmp_path):
+    created = share.create_share(server, "# Old\nv1", store_home=tmp_path)
+    slug = created["slug"]
+
+    share.update_share(server, slug, content="# New", store_home=tmp_path)
+    assert share.read_share(server, slug, store_home=tmp_path) == "# New"
+
+    # still ciphertext on the server after the update
+    assert _raw_get_content(server, slug).startswith("arsenc.")
+
+
+def test_public_flag_creates_plaintext(server, tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("AI_RESPONSE_SHARE_HOME", str(tmp_path))
+
+    assert (
+        share.main(["--url", server, "create", "--content", "# Plain", "--public"])
+        == 0
+    )
+    out = capsys.readouterr().out
+
+    url_line = next(line for line in out.splitlines() if line.startswith("view url:"))
+    url = url_line.split("view url:", 1)[1].strip()
+    assert "#" not in url
+
+    slug = share.extract_slug(url)
+    assert _raw_get_content(server, slug) == "# Plain"

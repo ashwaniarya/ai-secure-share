@@ -5,6 +5,7 @@ import { copyToClipboard } from "../lib/clipboard";
 import { AGENTS, GITHUB_URL, INSTALL_PROMPT } from "../lib/skill";
 
 const CHIPS = [
+  "🔐 End-to-end encrypted",
   "🛡 XSS-safe",
   "🔒 Optional password",
   "⏱ Auto-expiry",

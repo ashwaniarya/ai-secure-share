@@ -14,7 +14,7 @@ from app import crud
 from app.config import settings
 from app.database import get_db
 from app.models import now_utc
-from app.preview import extract_title, summarize, og_block, inject_og
+from app.preview import extract_title, summarize, og_block, inject_og, share_meta
 
 
 # ---- extract_title (unit) ---------------------------------------------------
@@ -77,6 +77,16 @@ def test_inject_og_falls_back_to_after_head_when_no_markers():
     out = inject_og("<head></head>", "NEW")
     assert "NEW" in out
     assert out.index("NEW") > out.index("<head>")
+
+
+# ---- share_meta (behavioural, security) -------------------------------------
+
+def test_share_meta_encrypted_content_is_not_summarised(db_session):
+    share, _ = crud.create_share(db_session, content="arsenc.1.iv.ct")
+    assert share_meta(share, expired=False) == (
+        "Encrypted note",
+        "This note is end-to-end encrypted — open the link to view.",
+    )
 
 
 # ---- route (behavioural) ----------------------------------------------------

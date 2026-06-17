@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, test, vi } from "vitest";
 import * as client from "../../api/client";
+import { encrypt, generateKey, keyToB64url } from "../../lib/crypto";
 import ViewPage from "../ViewPage";
 
 vi.mock("../../api/client", async (importOriginal) => {
@@ -13,6 +14,7 @@ vi.mock("../../api/client", async (importOriginal) => {
 afterEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
+  window.location.hash = "";
 });
 
 const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
@@ -37,6 +39,10 @@ const PUBLIC_VIEW = {
 };
 
 const LOCKED_VIEW = { ...PUBLIC_VIEW, content: null, has_password: true };
+
+function encryptedView(envelope: string) {
+  return { ...PUBLIC_VIEW, content: envelope };
+}
 
 test("renders public markdown content", async () => {
   vi.mocked(client.getShare).mockResolvedValue(PUBLIC_VIEW);
@@ -92,6 +98,41 @@ test("prompts for a password then renders unlocked content", async () => {
   expect(client.unlockShare).toHaveBeenCalledWith("abc", "pw");
   expect(
     await screen.findByRole("heading", { name: "Secret Doc" }),
+  ).toBeInTheDocument();
+});
+
+test("decrypts and renders an encrypted envelope with the #k= key", async () => {
+  const key = generateKey();
+  const envelope = await encrypt("# Encrypted Doc", key);
+  window.location.hash = "#k=" + keyToB64url(key);
+  vi.mocked(client.getShare).mockResolvedValue(encryptedView(envelope));
+  renderAt();
+
+  expect(
+    await screen.findByRole("heading", { name: "Encrypted Doc" }),
+  ).toBeInTheDocument();
+});
+
+test("shows a need-key message when the envelope has no key in the hash", async () => {
+  const key = generateKey();
+  const envelope = await encrypt("# Encrypted Doc", key);
+  window.location.hash = "";
+  vi.mocked(client.getShare).mockResolvedValue(encryptedView(envelope));
+  renderAt();
+
+  expect(await screen.findByText(/missing its key/i)).toBeInTheDocument();
+});
+
+test("shows a decrypt-error message when the key is wrong", async () => {
+  const key = generateKey();
+  const envelope = await encrypt("# Encrypted Doc", key);
+  // A different, valid 32-byte key — structurally fine but won't decrypt.
+  window.location.hash = "#k=" + keyToB64url(generateKey());
+  vi.mocked(client.getShare).mockResolvedValue(encryptedView(envelope));
+  renderAt();
+
+  expect(
+    await screen.findByText(/the key in this link looks wrong/i),
   ).toBeInTheDocument();
 });
 

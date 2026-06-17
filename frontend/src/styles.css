@@ -192,6 +192,17 @@ button.danger {
   font-size: 0.9rem;
 }
 
+.lede {
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+
+.hint {
+  margin-top: 0.25rem;
+}
+
 .markdown-preview {
   border: 1px dashed var(--border);
   border-radius: 8px;
