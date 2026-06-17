@@ -254,6 +254,116 @@ button.danger {
   color: var(--muted);
 }
 
+/* ---- mermaid diagrams (rendered from ```mermaid blocks) ----------------- */
+
+.mermaid-diagram {
+  position: relative;
+  width: 100%;
+  height: min(60vh, 480px);
+  margin: 1rem 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fcfdff;
+  overflow: hidden;
+}
+
+/* The zoom/pan viewport (react-zoom-pan-pinch wrapper) fills the bounded box.
+   grab cursor signals it's draggable when zoomed in. */
+.mermaid-diagram-viewport {
+  cursor: grab;
+}
+
+.mermaid-diagram-viewport:active {
+  cursor: grabbing;
+}
+
+.mermaid-diagram-content {
+  /* center the diagram in the viewport box */
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-diagram-svg {
+  padding: 1rem;
+}
+
+.mermaid-diagram-svg svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* per-diagram control cluster, mirroring .quick-actions but scoped + absolute */
+.diagram-zoom-controls {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px -18px rgba(15, 23, 42, 0.35);
+}
+
+/* loading + error variants are content-sized, not the fixed viewport box */
+.mermaid-loading {
+  height: auto;
+  padding: 1rem 1.25rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.mermaid-diagram-error {
+  height: auto;
+  overflow: visible;
+}
+
+.mermaid-error-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.85em;
+}
+
+/* fullscreen modal: re-mounts the diagram viewport over a blurred scrim */
+.diagram-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  padding: 2.5rem;
+  background: rgba(11, 11, 12, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.diagram-fullscreen .mermaid-diagram {
+  flex: 1;
+  height: auto;
+  margin: 0;
+  background: var(--surface);
+}
+
+.diagram-fullscreen-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 101;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diagram-zoom-controls button::after,
+  .diagram-fullscreen-close::after {
+    transition: none;
+  }
+}
+
 /* ---- view quick actions (floating reader controls, bottom-right) -------- */
 
 .quick-actions {
@@ -273,7 +383,9 @@ button.danger {
   box-shadow: 0 10px 30px -18px rgba(15, 23, 42, 0.35);
 }
 
-.quick-actions button {
+.quick-actions button,
+.diagram-zoom-controls button,
+.diagram-fullscreen-close {
   position: relative;
   align-self: auto;
   display: inline-flex;
@@ -289,12 +401,16 @@ button.danger {
   font-weight: 600;
 }
 
-.quick-actions button:hover:not(:disabled) {
+.quick-actions button:hover:not(:disabled),
+.diagram-zoom-controls button:hover:not(:disabled),
+.diagram-fullscreen-close:hover:not(:disabled) {
   background: #eef2ff;
   color: var(--accent);
 }
 
-.quick-actions button:focus-visible {
+.quick-actions button:focus-visible,
+.diagram-zoom-controls button:focus-visible,
+.diagram-fullscreen-close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -312,7 +428,9 @@ button.danger {
 }
 
 /* CSS-only tooltips, shown on hover and keyboard focus */
-.quick-actions button::after {
+.quick-actions button::after,
+.diagram-zoom-controls button::after,
+.diagram-fullscreen-close::after {
   content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 0.55rem);
@@ -331,7 +449,11 @@ button.danger {
 }
 
 .quick-actions button:hover::after,
-.quick-actions button:focus-visible::after {
+.quick-actions button:focus-visible::after,
+.diagram-zoom-controls button:hover::after,
+.diagram-zoom-controls button:focus-visible::after,
+.diagram-fullscreen-close:hover::after,
+.diagram-fullscreen-close:focus-visible::after {
   opacity: 1;
   transform: translateY(0);
 }
