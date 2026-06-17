@@ -5,9 +5,9 @@ description: Use when the user wants to save, share, store, persist, remember, o
 
 # ai-response-share
 
-Save markdown (AI responses or anything) as public share links, keep local
-memory items, and recall anything saved later. Everything goes through the
-stdlib-only CLI in this skill's directory:
+Save markdown (AI responses or anything) as share links — encrypted by default
+— keep local memory items, and recall anything saved later. Everything goes
+through the CLI in this skill's directory (needs the `cryptography` package):
 
 ```
 python <this-skill-dir>/scripts/share.py <command>
@@ -22,7 +22,7 @@ Run any command with `--help` for all flags.
 
 | User intent | Command |
 |---|---|
-| save / share / store / persist / remember / keep / export content | `create --content <md\|file\|->` → public link |
+| save / share / store / persist / remember / keep / export content | `create --content <md\|file\|->` → encrypted link (add `--public` for a plaintext share) |
 | …with explicit "no link" / "local only" / "don't publish" | `remember --content <md\|file\|->` (local, no network) |
 | open / read a link, slug, or saved item | `read <url-or-slug-or-id>` |
 | what have I saved? | `list` |
@@ -38,14 +38,31 @@ No operation is gated — every command is always available.
   → `create` → **always put the view URL in your reply**.
 - Use `remember` ONLY when the user explicitly opts out of a link with wording
   like "no link", "no public link", "local only", "don't publish", "don't
-  upload". "Remember this" without such wording = `create` (public link; it is
-  still indexed and recallable).
-- Never ask which mode to use; the user's wording decides.
+  upload". "Remember this" without such wording = `create` (still returns a
+  link, indexed and recallable).
+- **Encrypted vs public** — `create` is end-to-end **encrypted by default**: the
+  decryption key lives in the link after `#`, the server only stores ciphertext.
+  `create --public` opts into a plaintext share — rich link previews, no key in
+  the URL. Choose by the user's wording:
+  - "public link" / "with preview" / "no encryption" / "plaintext" → `--public`
+  - "encrypted" / "private" / "secret" / "zero-knowledge" → encrypted
+  - wording doesn't decide → ask ONE short selectable question:
+    "Encrypted (default) or public?" then act. (This is the only mode question
+    allowed — the link-vs-no-link default never changes; you always return a
+    link.)
 - Direct-action phrasing ("create current response into a shareable link") =
-  run it immediately, no questions.
+  run it immediately, no questions (default encrypted if wording is neutral).
 - Defaults: never expires, no password, title auto-derived from the first
   heading. Apply them silently; you may mention `--expires/--password/--title`
   as adjustable in one short aside, never as a blocking question.
+
+## Encrypted links are secrets
+
+- Share an encrypted link **IN FULL, including the `#k=...` fragment** — that
+  fragment is the decryption key. A link without it cannot be read.
+- Anyone with the whole link can read the content, so treat it as a secret.
+- The manage token is **separate** — it is never in the URL and is still
+  required to edit/delete.
 
 ## Reads
 
@@ -53,6 +70,10 @@ No operation is gated — every command is always available.
   id — straight to `read`. Do NOT extract the slug yourself.
 - Public shares need no token. Password-protected: re-run with `--password`
   (ask the user for it if unknown).
+- Encrypted shares: one created on **this machine** resolves its key
+  automatically from the local store — a bare slug is enough. One created
+  **elsewhere** needs the full link (with the `#k=...` fragment) or `--key`;
+  ask the user for the full link if they gave only a slug.
 
 ## Recall and listing
 
@@ -94,17 +115,23 @@ defaults.
 ## Local store
 
 `$AI_RESPONSE_SHARE_HOME` (default `~/.ai-response-share`) holds `tokens.json`
-(manage tokens), `index.json` (titles/dates for recall), and `memory/*.md`
-(local-only items).
+(manage tokens), `keys.json` (per-slug decryption keys), `index.json`
+(titles/dates for recall), and `memory/*.md` (local-only items).
 
 ## Install
 
 ```
 ln -s "$(pwd)/skill/ai-response-share" ~/.claude/skills/ai-response-share
+pip install -r <this-skill-dir>/requirements.txt
 ```
+
+The second line installs `cryptography` (>=42), required for encrypted shares.
 
 ## Tests
 
 ```
 backend/.venv/bin/python -m pytest skill/ai-response-share/tests
 ```
+
+The venv needs `cryptography` installed (`pip install -r
+skill/ai-response-share/requirements.txt`).

@@ -45,3 +45,17 @@ if (typeof window !== "undefined" && !window.matchMedia) {
       }) as unknown as MediaQueryList,
   });
 }
+
+// jsdom does not expose WebCrypto's SubtleCrypto, but `src/lib/crypto.ts` uses
+// `globalThis.crypto.subtle` for AES-GCM. Polyfill from Node's webcrypto when
+// missing so the crypto suite (and any downstream code that encrypts) runs.
+// The guard keeps this inert wherever a real `crypto.subtle` already exists.
+if (typeof globalThis.crypto === "undefined" || !globalThis.crypto.subtle) {
+  // @ts-expect-error - "node:crypto" types need @types/node, which this
+  // frontend does not depend on; the module exists at runtime under Node/vitest.
+  const { webcrypto } = await import("node:crypto");
+  Object.defineProperty(globalThis, "crypto", {
+    value: webcrypto,
+    configurable: true,
+  });
+}

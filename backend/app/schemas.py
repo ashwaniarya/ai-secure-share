@@ -9,7 +9,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-_MAX_CONTENT = 100_000
+# Encrypted envelopes are ~1.37x their plaintext, so raise the ceiling to keep
+# the effective plaintext limit near the previous 100_000.
+_MAX_CONTENT = 200_000
 
 
 class ShareCreate(BaseModel):

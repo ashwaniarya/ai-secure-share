@@ -33,6 +33,8 @@ test("creates a share and shows the link and manage token once", async () => {
   renderPage();
 
   await user.type(screen.getByLabelText(/markdown/i), "# Hello");
+  // Default-on encryption: turn it off to assert the plaintext passthrough.
+  await user.click(screen.getByLabelText(/end-to-end encrypt/i));
   await user.click(screen.getByRole("button", { name: /create/i }));
 
   expect(client.createShare).toHaveBeenCalledWith(
@@ -63,6 +65,8 @@ test("includes password and expiry when supplied", async () => {
 
   await user.type(screen.getByLabelText(/markdown/i), "x");
   await user.type(screen.getByLabelText(/password/i), "pw");
+  // Turn off encryption so the plaintext content assertion holds.
+  await user.click(screen.getByLabelText(/end-to-end encrypt/i));
   await user.selectOptions(screen.getByLabelText(/expires/i), "3600");
   await user.click(screen.getByRole("button", { name: /create/i }));
 
@@ -71,6 +75,28 @@ test("includes password and expiry when supplied", async () => {
     password: "pw",
     expires_in_seconds: 3600,
   });
+});
+
+test("encrypts before createShare when the toggle is on", async () => {
+  vi.mocked(client.createShare).mockResolvedValue({
+    slug: "abc",
+    manage_token: "t",
+    url: "http://localhost/s/abc",
+    expires_at: null,
+  });
+  const user = userEvent.setup();
+  renderPage();
+
+  // Encryption is on by default — do not touch the checkbox.
+  await user.type(screen.getByLabelText(/markdown/i), "# Secret");
+  await user.click(screen.getByRole("button", { name: /create/i }));
+
+  const sentContent = vi.mocked(client.createShare).mock.calls[0][0].content;
+  expect(sentContent.startsWith("arsenc.")).toBe(true);
+  expect(sentContent).not.toContain("# Secret");
+
+  const link = await screen.findByText(/http:\/\/localhost\/s\/abc#k=/);
+  expect(link).toBeInTheDocument();
 });
 
 test("shows an error message when creation fails", async () => {

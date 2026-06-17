@@ -29,6 +29,8 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
+import crypto
+
 DEFAULT_BASE_URL = "https://airesponseshare.com"
 TITLE_MAX_CHARS = 80
 _EXPIRY_PRESETS = {"1h": 3600, "1d": 86400, "7d": 604800, "30d": 2592000}
@@ -140,6 +142,42 @@ def remove_token(slug: str, store_home=None) -> None:
         _token_file(store_home).write_text(json.dumps(tokens, indent=2))
 
 
+# Decryption keys for encrypted shares, cached so reads/updates by slug work
+# without re-pasting the share link's #k=... fragment. Mirrors the token store.
+
+def _keys_file(store_home=None) -> Path:
+    return _home(store_home) / "keys.json"
+
+
+def load_keys(store_home=None) -> dict:
+    path = _keys_file(store_home)
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+
+
+def save_key(slug: str, key_b64url: str, store_home=None) -> None:
+    home = _home(store_home)
+    home.mkdir(parents=True, exist_ok=True)
+    keys = load_keys(store_home)
+    keys[slug] = key_b64url
+    _keys_file(store_home).write_text(json.dumps(keys, indent=2))
+
+
+def lookup_key(slug: str, store_home=None) -> str | None:
+    return load_keys(store_home).get(slug)
+
+
+def remove_key(slug: str, store_home=None) -> None:
+    keys = load_keys(store_home)
+    if slug in keys:
+        del keys[slug]
+        _keys_file(store_home).write_text(json.dumps(keys, indent=2))
+
+
 def _index_file(store_home=None) -> Path:
     return _home(store_home) / "index.json"
 
@@ -235,8 +273,30 @@ def create_share(
     password: str | None = None,
     expires=None,
     title: str | None = None,
+    encrypt: bool = True,
     store_home=None,
 ) -> dict:
+    """Create a public share link for ``content``.
+
+    By default the content is end-to-end encrypted: a random 256-bit key is
+    generated locally, the content is sealed into an AES-256-GCM envelope, and
+    only that envelope is sent to the server. The key is appended to the view
+    URL as a ``#k=<b64url>`` fragment (never sent to the server) and cached
+    locally so later reads/updates by slug need no link. Pass ``encrypt=False``
+    for a plaintext (public) share with no fragment.
+
+    The optional ``password`` is an independent server-side access gate that
+    layers on top of either mode.
+    """
+    # Title is derived from the plaintext, before any encryption replaces it.
+    resolved_title = title or derive_title(content)
+
+    key_b64: str | None = None
+    if encrypt:
+        key = crypto.generate_key()
+        key_b64 = crypto.key_to_b64url(key)
+        content = crypto.encrypt(content, key)
+
     payload: dict = {"content": content}
     if password:
         payload["password"] = password
@@ -245,11 +305,18 @@ def create_share(
         payload["expires_in_seconds"] = seconds
     _, data = _request("POST", f"{base_url}/api/shares", data=payload)
     save_token(data["slug"], data["manage_token"], store_home=store_home)
+
+    view_url = data.get("url") or f"{base_url}/s/{data['slug']}"
+    if key_b64 is not None:
+        save_key(data["slug"], key_b64, store_home=store_home)
+        view_url = view_url + "#k=" + key_b64
+        data["url"] = view_url
+
     _index_put(
         data["slug"],
         "share",
-        title or derive_title(content),
-        url=data.get("url") or f"{base_url}/s/{data['slug']}",
+        resolved_title,
+        url=view_url,
         store_home=store_home,
     )
     return data
@@ -261,18 +328,43 @@ def read_share(
     *,
     password: str | None = None,
     token: str | None = None,
+    key: str | None = None,
+    store_home=None,
 ) -> str:
+    """Read a share's content, decrypting it if it is an encrypted envelope.
+
+    The decryption key is resolved as: the explicit ``key`` argument (e.g. from
+    a pasted ``#k=...`` link) first, else the locally cached key for ``slug``.
+    Plaintext (public) shares are returned as-is.
+    """
+    resolved_key = key or lookup_key(slug, store_home)
+
     _, data = _request("GET", f"{base_url}/api/shares/{slug}", token=token)
-    if data.get("content") is not None:
-        return data["content"]
-    if data.get("has_password"):
-        if password is None:
-            raise ApiError(401, "this share is password protected; pass --password")
-        _, unlocked = _request(
-            "POST", f"{base_url}/api/shares/{slug}/unlock", data={"password": password}
-        )
-        return unlocked["content"]
-    return ""
+    content = data.get("content")
+    if content is None:
+        if data.get("has_password"):
+            if password is None:
+                raise ApiError(
+                    401, "this share is password protected; pass --password"
+                )
+            _, unlocked = _request(
+                "POST",
+                f"{base_url}/api/shares/{slug}/unlock",
+                data={"password": password},
+            )
+            content = unlocked["content"]
+        else:
+            return ""
+
+    if crypto.is_encrypted(content):
+        if not resolved_key:
+            raise ApiError(
+                400,
+                "this share is encrypted; open it with the full link including "
+                "the #k=... part, or pass --key",
+            )
+        return crypto.decrypt(content, crypto.b64url_to_key(resolved_key))
+    return content
 
 
 def update_share(
@@ -283,11 +375,30 @@ def update_share(
     password=_UNSET,
     expires=_UNSET,
     token: str | None = None,
+    key: str | None = None,
     store_home=None,
 ) -> dict:
+    """Update a share, re-encrypting new content if a key is known for it.
+
+    The key is resolved as the explicit ``key`` argument first, else the cached
+    key for ``slug``. When a key is known and the content is being changed, the
+    new plaintext is sealed into a fresh envelope before the PUT (and the key is
+    re-saved); otherwise the content is sent as plaintext, as before. The title
+    is always derived from the plaintext, before any encryption.
+    """
     resolved = _require_token(slug, token, store_home)
+    resolved_key = key or lookup_key(slug, store_home)
+
+    if content is not _UNSET:
+        new_title = derive_title(content)
+    else:
+        new_title = None
+
     patch: dict = {}
     if content is not _UNSET:
+        if resolved_key:
+            content = crypto.encrypt(content, crypto.b64url_to_key(resolved_key))
+            save_key(slug, resolved_key, store_home=store_home)
         patch["content"] = content
     if password is not _UNSET:
         patch["password"] = password
@@ -300,9 +411,7 @@ def update_share(
     # share created elsewhere editable from this machine from now on.
     if token:
         save_token(slug, token, store_home=store_home)
-    if content is not _UNSET:
-        new_title = derive_title(content)
-    else:
+    if new_title is None:
         new_title = load_index(store_home).get(slug, {}).get("title", "(untitled)")
     _index_put(
         slug,
@@ -324,6 +433,7 @@ def delete_share(
     resolved = _require_token(slug, token, store_home)
     _request("DELETE", f"{base_url}/api/shares/{slug}", token=resolved)
     remove_token(slug, store_home=store_home)
+    remove_key(slug, store_home=store_home)
     _index_remove(slug, store_home=store_home)
 
 
@@ -469,6 +579,11 @@ def build_parser() -> argparse.ArgumentParser:
     create.add_argument("--title", help="override the auto-derived title")
     create.add_argument("--password")
     create.add_argument("--expires", help="never/1h/1d/7d/30d or seconds")
+    create.add_argument(
+        "--public",
+        action="store_true",
+        help="store plaintext on the server instead of an encrypted envelope",
+    )
 
     remember_cmd = sub.add_parser(
         "remember", help="save content locally only (no public link)"
@@ -483,11 +598,13 @@ def build_parser() -> argparse.ArgumentParser:
     recall = sub.add_parser("recall", help="find a saved item by id or title and print it")
     recall.add_argument("query", help="item id, exact title, or title fragment")
     recall.add_argument("--password", help="for password-protected shares")
+    recall.add_argument("--key", help="decryption key for an encrypted share")
 
     read = sub.add_parser("read", help="read a share or memory item")
     read.add_argument("slug", help="share slug, share URL, or saved item id")
     read.add_argument("--password")
     read.add_argument("--token")
+    read.add_argument("--key", help="decryption key for an encrypted share")
 
     update = sub.add_parser("update", help="update a share or memory item")
     update.add_argument("slug", help="share slug, share URL, or saved item id")
@@ -495,6 +612,7 @@ def build_parser() -> argparse.ArgumentParser:
     update.add_argument("--password")
     update.add_argument("--expires")
     update.add_argument("--token")
+    update.add_argument("--key", help="decryption key for an encrypted share")
 
     delete = sub.add_parser("delete", help="delete a share or memory item")
     delete.add_argument("slug", help="share slug, share URL, or saved item id")
@@ -513,11 +631,17 @@ def main(argv=None) -> int:
                 password=args.password,
                 expires=args.expires,
                 title=args.title,
+                encrypt=not args.public,
             )
             print(f"slug:         {result['slug']}")
             print(f"view url:     {result['url']}")
             print(f"manage token: {result['manage_token']}")
             print("(save the manage token — it is shown only once)")
+            if not args.public:
+                print(
+                    "(the link contains the decryption key after #; share the "
+                    "whole link and treat it as a secret)"
+                )
         elif args.command == "remember":
             result = remember(_read_content(args.content), title=args.title)
             print(f"remembered:   {result['id']}")
@@ -542,13 +666,27 @@ def main(argv=None) -> int:
             if item["kind"] == "memory":
                 print(_memory_file(item["id"]).read_text())
             else:
-                print(read_share(base_url, item["id"], password=args.password))
+                key = args.key or crypto.extract_key_from_url(args.query)
+                print(
+                    read_share(
+                        base_url, item["id"], password=args.password, key=key
+                    )
+                )
         elif args.command == "read":
             ref = extract_slug(args.slug)
             if _kind_of(ref) == "memory":
                 print(_memory_file(ref).read_text())
             else:
-                print(read_share(base_url, ref, password=args.password, token=args.token))
+                key = args.key or crypto.extract_key_from_url(args.slug)
+                print(
+                    read_share(
+                        base_url,
+                        ref,
+                        password=args.password,
+                        token=args.token,
+                        key=key,
+                    )
+                )
         elif args.command == "update":
             ref = extract_slug(args.slug)
             if _kind_of(ref) == "memory":
@@ -564,6 +702,9 @@ def main(argv=None) -> int:
                 update_memory(ref, **kwargs)
             else:
                 kwargs = {"token": args.token}
+                key = args.key or crypto.extract_key_from_url(args.slug)
+                if key is not None:
+                    kwargs["key"] = key
                 if args.content is not None:
                     kwargs["content"] = _read_content(args.content)
                 if args.password is not None:

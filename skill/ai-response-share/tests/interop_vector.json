@@ -1,0 +1,6 @@
+{
+  "key_b64url": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+  "iv_b64url": "ZGVmZ2hpamtsbW5v",
+  "plaintext": "# Secret\nhello world 🔐",
+  "envelope": "arsenc.1.ZGVmZ2hpamtsbW5v.azuNAxqbM-o0CjqEtgpKii2wam6rnGzmN0GGDXgioyLi7ewWvxioJV4"
+}

@@ -18,7 +18,7 @@ import html
 import re
 
 SITE_NAME = "AI Response Share"
-SITE_TAGLINE = "Paste markdown, get a shareable link."
+SITE_TAGLINE = "End-to-end encrypted markdown sharing."
 DEFAULT_TITLE = "Shared note"
 
 _HEADING_PREFIX = re.compile(r"^\s{0,3}#{1,6}\s*")
@@ -109,4 +109,6 @@ def share_meta(share, *, expired: bool) -> tuple[str, str]:
         return "Expired note", "This shared note has expired."
     if share.password_hash is not None:
         return "Password-protected note", "Open the link to enter the password."
+    if share.content.startswith("arsenc."):
+        return "Encrypted note", "This note is end-to-end encrypted — open the link to view."
     return extract_title(share.content), summarize(share.content)

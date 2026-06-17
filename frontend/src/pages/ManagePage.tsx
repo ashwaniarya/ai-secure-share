@@ -6,6 +6,13 @@ import {
   updateShare,
   type UpdateShareInput,
 } from "../api/client";
+import {
+  b64urlToBytes,
+  decrypt,
+  encrypt,
+  isEncrypted,
+  parseKeyFromHash,
+} from "../lib/crypto";
 
 const EXPIRY_OPTIONS = [
   { label: "Keep current", value: "keep" },
@@ -28,16 +35,71 @@ export default function ManagePage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  // When the loaded share is an `arsenc.` envelope, this holds the key used to
+  // decrypt it so we can re-encrypt edits under the SAME key on save. Null for
+  // plaintext shares. Sourced from the URL fragment or a pasted key.
+  const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
+  // The raw encrypted envelope is held while we wait for the user to paste the
+  // key (the `#k=` fragment was missing from the manage URL).
+  const [pendingEnvelope, setPendingEnvelope] = useState<string | null>(null);
+  const [pastedKey, setPastedKey] = useState("");
+
+  /** Decrypt `envelope` with `key` into the editable textarea, or surface an error. */
+  async function applyDecryptedContent(envelope: string, key: Uint8Array) {
+    const plaintext = await decrypt(envelope, key);
+    setContent(plaintext);
+    setEncryptionKey(key);
+    setPendingEnvelope(null);
+    setLoaded(true);
+  }
 
   async function handleLoad(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
     try {
       const view = await getShare(slug, token);
-      setContent(view.content ?? "");
-      setLoaded(true);
+      const raw = view.content ?? "";
+
+      if (!isEncrypted(raw)) {
+        setContent(raw);
+        setEncryptionKey(null);
+        setLoaded(true);
+        return;
+      }
+
+      const key = parseKeyFromHash();
+      if (!key) {
+        // Encrypted, but the manage URL has no `#k=` key — ask the user to paste it.
+        setPendingEnvelope(raw);
+        setLoaded(true);
+        return;
+      }
+
+      try {
+        await applyDecryptedContent(raw, key);
+      } catch {
+        setError("Could not decrypt — the key in this link looks wrong.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load share");
+    }
+  }
+
+  async function handleApplyPastedKey(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    if (!pendingEnvelope) return;
+    let key: Uint8Array;
+    try {
+      key = b64urlToBytes(pastedKey.trim());
+    } catch {
+      setError("That key is not valid — paste the part after #k=.");
+      return;
+    }
+    try {
+      await applyDecryptedContent(pendingEnvelope, key);
+    } catch {
+      setError("Could not decrypt — that key looks wrong.");
     }
   }
 
@@ -45,11 +107,15 @@ export default function ManagePage() {
     event.preventDefault();
     setError(null);
     setMessage(null);
-    const patch: UpdateShareInput = { content };
-    if (removePassword) patch.password = null;
-    else if (newPassword) patch.password = newPassword;
-    if (expiry !== "keep") patch.expires_in_seconds = expiry ? Number(expiry) : null;
     try {
+      // Re-encrypt under the original key so the existing `#k=` link still works.
+      const payload = encryptionKey
+        ? await encrypt(content, encryptionKey)
+        : content;
+      const patch: UpdateShareInput = { content: payload };
+      if (removePassword) patch.password = null;
+      else if (newPassword) patch.password = newPassword;
+      if (expiry !== "keep") patch.expires_in_seconds = expiry ? Number(expiry) : null;
       await updateShare(slug, token, patch);
       setMessage("Saved");
     } catch (err) {
@@ -98,6 +164,34 @@ export default function ManagePage() {
         )}
         <button type="submit" disabled={!token}>
           Load
+        </button>
+      </form>
+    );
+  }
+
+  if (pendingEnvelope) {
+    return (
+      <form className="card" onSubmit={handleApplyPastedKey}>
+        <h1>Encryption key needed</h1>
+        <p>
+          This share is end-to-end encrypted, but this link is missing its key —
+          the part after <code>#k=</code>. Paste that key to edit the content.
+        </p>
+        <label htmlFor="manage-key">Encryption key</label>
+        <input
+          id="manage-key"
+          type="text"
+          value={pastedKey}
+          onChange={(e) => setPastedKey(e.target.value)}
+          autoComplete="off"
+        />
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={!pastedKey.trim()}>
+          Unlock for editing
         </button>
       </form>
     );

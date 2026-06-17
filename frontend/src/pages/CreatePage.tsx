@@ -4,6 +4,7 @@ import {
   type CreatedShare,
   type CreateShareInput,
 } from "../api/client";
+import { encrypt, generateKey, keyToB64url } from "../lib/crypto";
 import CreatedResult from "../components/CreatedResult";
 import Hero from "../components/Hero";
 import MarkdownPreview from "../components/MarkdownPreview";
@@ -21,6 +22,7 @@ export default function CreatePage() {
   const [content, setContent] = useState("");
   const [password, setPassword] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [encryptEnabled, setEncryptEnabled] = useState(true);
   const [created, setCreated] = useState<CreatedShare | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,10 +38,25 @@ export default function CreatePage() {
     setError(null);
     setSubmitting(true);
     try {
-      const input: CreateShareInput = { content };
+      // Encrypt in the browser when enabled (default). The 256-bit key goes in
+      // the URL fragment so it never reaches the server; the server stores only
+      // the `arsenc.` ciphertext envelope.
+      let payload = content;
+      let keyFragment = "";
+      if (encryptEnabled) {
+        const key = generateKey();
+        payload = await encrypt(content, key);
+        keyFragment = "#k=" + keyToB64url(key);
+      }
+
+      const input: CreateShareInput = { content: payload };
       if (password) input.password = password;
       if (expiry) input.expires_in_seconds = Number(expiry);
-      setCreated(await createShare(input));
+
+      const result = await createShare(input);
+      // Fold the key fragment into the shown/copied link so the recipient can
+      // decrypt; for plaintext shares keyFragment is empty.
+      setCreated({ ...result, url: result.url + keyFragment });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create link");
     } finally {
@@ -101,6 +118,19 @@ export default function CreatePage() {
                       </select>
                     </div>
                   </div>
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      checked={encryptEnabled}
+                      onChange={(e) => setEncryptEnabled(e.target.checked)}
+                    />
+                    End-to-end encrypt
+                  </label>
+                  <p className="muted hint">
+                    {encryptEnabled
+                      ? "Encrypted in your browser with AES-256-GCM before upload. The key goes in the link after the # and is never sent to us — the server stores only ciphertext. Anyone you give the full link to can read it."
+                      : "Off: uploaded as plaintext — the server can read it and link previews show a snippet. Anyone with the link can read it."}
+                  </p>
                   {error && (
                     <p role="alert" className="error">
                       {error}
