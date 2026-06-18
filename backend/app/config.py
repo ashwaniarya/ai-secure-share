@@ -4,7 +4,25 @@ Centralizes the few knobs the service needs so the rest of the code never
 reads ``os.environ`` directly.
 """
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def normalize_public_base_url(url: str) -> str:
+    """Guarantee the public base URL is absolute and has no trailing slash.
+
+    A scheme-less value (e.g. ``airesponseshare.com``) flows into every share
+    URL the API returns; browsers then treat the link as relative and resolve
+    it against the current page, yielding a duplicated-domain URL
+    (``host/host/s/slug``). Prepend ``https://`` when the scheme is missing and
+    strip a trailing slash so ``{base}/s/{slug}`` never doubles it.
+    """
+    cleaned = url.strip().rstrip("/")
+    if cleaned.startswith("//"):
+        return f"https:{cleaned}"
+    if "://" not in cleaned:
+        return f"https://{cleaned}"
+    return cleaned
 
 
 def normalize_database_url(url: str) -> str:
@@ -29,6 +47,11 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     # Directory of the built frontend (Vite ``dist``); served if it exists.
     static_dir: str = "static"
+
+    @field_validator("public_base_url")
+    @classmethod
+    def _normalize_public_base_url(cls, value: str) -> str:
+        return normalize_public_base_url(value)
 
     # Rate limiting (slowapi). Limits are "<count>/<period>" strings.
     # Disabled in the test suite; enabled by default in dev/prod.
