@@ -739,6 +739,15 @@ body.home .app {
   color: var(--accent);
 }
 
+/* A <button class="cta-ghost"> still inherits the filled accent background from
+   the base button rule, so its label must stay white for contrast — muted text
+   is near-invisible on the green fill. Links (<a class="cta-ghost">) sit on the
+   light page background and keep the muted/accent treatment above. */
+button.cta-ghost,
+button.cta-ghost:hover:not(:disabled) {
+  color: #fff;
+}
+
 .install-confirm {
   color: var(--success);
   font-weight: 600;
