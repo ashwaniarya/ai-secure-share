@@ -1,3 +1,4 @@
+import argparse
 import socket
 import sys
 import threading
@@ -34,6 +35,36 @@ def test_parse_expiry(value, expected):
 def test_parse_expiry_rejects_garbage():
     with pytest.raises(ValueError):
         share.parse_expiry("banana")
+
+
+# ---- unit: base URL normalization -------------------------------------------
+# A scheme-less base URL produces scheme-less share links; pasted into a browser
+# those resolve relative to the current page -> duplicated-domain (host/host/s/x).
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("airesponseshare.com", "https://airesponseshare.com"),
+        ("https://airesponseshare.com", "https://airesponseshare.com"),
+        ("http://localhost:8000", "http://localhost:8000"),
+        ("https://airesponseshare.com/", "https://airesponseshare.com"),
+        ("//airesponseshare.com", "https://airesponseshare.com"),
+    ],
+)
+def test_normalize_base_url(raw, expected):
+    assert share.normalize_base_url(raw) == expected
+
+
+def test_base_url_normalizes_scheme_less_flag(monkeypatch):
+    monkeypatch.delenv("AI_RESPONSE_SHARE_URL", raising=False)
+    args = argparse.Namespace(url="airesponseshare.com")
+    assert share._base_url(args) == "https://airesponseshare.com"
+
+
+def test_base_url_normalizes_scheme_less_env(monkeypatch):
+    monkeypatch.setenv("AI_RESPONSE_SHARE_URL", "airesponseshare.com")
+    args = argparse.Namespace(url=None)
+    assert share._base_url(args) == "https://airesponseshare.com"
 
 
 # ---- unit: token store ------------------------------------------------------

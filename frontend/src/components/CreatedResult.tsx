@@ -1,5 +1,6 @@
 import type { CreatedShare } from "../api/client";
 import { copyToClipboard } from "../lib/clipboard";
+import { toAbsoluteUrl } from "../lib/url";
 
 interface CreatedResultProps {
   share: CreatedShare;
@@ -11,6 +12,10 @@ export default function CreatedResult({
   share,
   onCreateAnother,
 }: CreatedResultProps) {
+  // Force an absolute URL: a scheme-less server URL would render as a relative
+  // href and resolve to the duplicated-domain link (host/host/s/<slug>).
+  const shareUrl = toAbsoluteUrl(share.url);
+
   return (
     <section className="card result-card">
       <div className="result-emoji" aria-hidden="true">
@@ -19,20 +24,20 @@ export default function CreatedResult({
       <h1 className="result-title">Your link is ready</h1>
       <p className="muted">Anyone with this link can read your markdown:</p>
 
-      <a className="share-url" href={share.url}>
-        {share.url}
+      <a className="share-url" href={shareUrl}>
+        {shareUrl}
       </a>
       <div className="result-actions">
         <button
           type="button"
           className="cta-primary"
-          onClick={() => copyToClipboard(share.url)}
+          onClick={() => copyToClipboard(shareUrl)}
         >
           Copy link
         </button>
         <a
           className="cta-ghost"
-          href={share.url}
+          href={shareUrl}
           target="_blank"
           rel="noreferrer"
         >
