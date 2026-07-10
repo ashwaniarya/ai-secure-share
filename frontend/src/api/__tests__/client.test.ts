@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { createShare, deleteShare, getShare } from "../client";
+import {
+  createShare,
+  deleteShare,
+  ensureAbsoluteUrl,
+  getShare,
+} from "../client";
 
 const fetchMock = vi.fn();
 
@@ -34,6 +39,44 @@ test("createShare posts content to /api/shares and returns the result", async ()
   expect(url).toBe("/api/shares");
   expect(init.method).toBe("POST");
   expect(JSON.parse(init.body)).toEqual({ content: "# hi" });
+});
+
+test("ensureAbsoluteUrl prefixes a scheme-less host but leaves valid URLs alone", () => {
+  // the doubling bug: a scheme-less host must NOT stay relative
+  expect(ensureAbsoluteUrl("airesponseshare.com/s/abc#k=x")).toBe(
+    "https://airesponseshare.com/s/abc#k=x",
+  );
+  // already-valid forms pass through unchanged
+  expect(ensureAbsoluteUrl("https://airesponseshare.com/s/abc")).toBe(
+    "https://airesponseshare.com/s/abc",
+  );
+  expect(ensureAbsoluteUrl("http://localhost:8000/s/abc")).toBe(
+    "http://localhost:8000/s/abc",
+  );
+  expect(ensureAbsoluteUrl("//airesponseshare.com/s/abc")).toBe(
+    "https://airesponseshare.com/s/abc",
+  );
+  expect(ensureAbsoluteUrl("/s/abc")).toBe("/s/abc");
+});
+
+test("createShare returns an absolute url even if the API omits the scheme", async () => {
+  fetchMock.mockResolvedValue(
+    jsonResponse(
+      {
+        slug: "abc",
+        manage_token: "t",
+        url: "airesponseshare.com/s/abc",
+        expires_at: null,
+      },
+      201,
+    ),
+  );
+
+  const result = await createShare({ content: "# hi" });
+
+  // guards the reported bug: a scheme-less href resolves relative to the page
+  // and doubles the host when clicked.
+  expect(result.url).toBe("https://airesponseshare.com/s/abc");
 });
 
 test("getShare fetches the share view", async () => {

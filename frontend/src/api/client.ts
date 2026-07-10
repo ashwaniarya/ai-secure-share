@@ -80,8 +80,31 @@ async function readErrorDetail(response: Response): Promise<string> {
   return response.statusText || `Request failed (${response.status})`;
 }
 
-export function createShare(input: CreateShareInput): Promise<CreatedShare> {
-  return request<CreatedShare>("/api/shares", { method: "POST", body: input });
+/**
+ * Guarantee an absolute URL. A scheme-less value like "airesponseshare.com/s/x"
+ * used as an `<a href>` is resolved *relative* to the current page by every
+ * browser (the WHATWG URL standard), producing a doubled host
+ * ("https://host/airesponseshare.com/s/x"). Prefix a scheme so share links are
+ * always absolute. Already-absolute, protocol-relative, and root-relative URLs
+ * pass through unchanged (only a scheme-less host is at risk of doubling).
+ */
+export function ensureAbsoluteUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed; // has a scheme
+  if (trimmed.startsWith("//")) return `https:${trimmed}`; // protocol-relative
+  if (trimmed.startsWith("/")) return trimmed; // root-relative resolves correctly
+  return `https://${trimmed}`; // scheme-less host — the doubling case
+}
+
+export async function createShare(
+  input: CreateShareInput,
+): Promise<CreatedShare> {
+  const result = await request<CreatedShare>("/api/shares", {
+    method: "POST",
+    body: input,
+  });
+  return { ...result, url: ensureAbsoluteUrl(result.url) };
 }
 
 export function getShare(slug: string, token?: string): Promise<ShareView> {

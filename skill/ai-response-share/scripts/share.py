@@ -549,8 +549,23 @@ def _read_content(value: str) -> str:
     return value
 
 
+def _normalize_base_url(url: str) -> str:
+    """Absolute base URL, no trailing slash.
+
+    A scheme-less base (e.g. ``AI_RESPONSE_SHARE_URL=airesponseshare.com``) would
+    make urllib fail on requests and produce doubled-host view links; prepend
+    ``https://`` when no scheme is present.
+    """
+    cleaned = url.strip().rstrip("/")
+    if cleaned and "://" not in cleaned:
+        cleaned = "https://" + cleaned
+    return cleaned
+
+
 def _base_url(args) -> str:
-    return args.url or os.environ.get("AI_RESPONSE_SHARE_URL", DEFAULT_BASE_URL)
+    return _normalize_base_url(
+        args.url or os.environ.get("AI_RESPONSE_SHARE_URL", DEFAULT_BASE_URL)
+    )
 
 
 def _print_items(items: list[dict], stream) -> None:

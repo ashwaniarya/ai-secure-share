@@ -25,6 +25,29 @@ def _raw_get_content(base_url: str, slug: str) -> str:
         return json.loads(response.read())["content"]
 
 
+# ---- unit: base URL normalization -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("airesponseshare.com", "https://airesponseshare.com"),
+        ("airesponseshare.com/", "https://airesponseshare.com"),
+        ("https://airesponseshare.com/", "https://airesponseshare.com"),
+        ("http://localhost:8000", "http://localhost:8000"),
+    ],
+)
+def test_normalize_base_url(raw, expected):
+    assert share._normalize_base_url(raw) == expected
+
+
+def test_base_url_normalizes_scheme_less_env(monkeypatch):
+    from argparse import Namespace
+
+    monkeypatch.setenv("AI_RESPONSE_SHARE_URL", "airesponseshare.com")
+    assert share._base_url(Namespace(url=None)) == "https://airesponseshare.com"
+
+
 # ---- unit: expiry parsing ---------------------------------------------------
 
 @pytest.mark.parametrize(
