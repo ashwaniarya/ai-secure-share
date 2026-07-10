@@ -739,13 +739,18 @@ body.home .app {
   color: var(--accent);
 }
 
-/* A <button class="cta-ghost"> still inherits the filled accent background from
-   the base button rule, so its label must stay white for contrast — muted text
-   is near-invisible on the green fill. Links (<a class="cta-ghost">) sit on the
-   light page background and keep the muted/accent treatment above. */
-button.cta-ghost,
+/* A ghost CTA on a <button> must shed the base button chrome (green fill,
+   padding, border) so it reads as a text link like the <a class="cta-ghost">
+   CTAs — e.g. "Create another" matching "Open link ↗" beside it. Text color and
+   hover come from the .cta-ghost rules above. */
+button.cta-ghost {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
 button.cta-ghost:hover:not(:disabled) {
-  color: #fff;
+  background: transparent;
 }
 
 .install-confirm {
