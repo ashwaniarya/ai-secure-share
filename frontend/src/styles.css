@@ -739,6 +739,18 @@ body.home .app {
   color: var(--accent);
 }
 
+/* A ghost CTA on a <button> must shed the base button chrome (green fill,
+   padding, border) so it reads as a text link like the <a> ghost CTAs. */
+button.cta-ghost {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+button.cta-ghost:hover:not(:disabled) {
+  background: transparent;
+}
+
 .install-confirm {
   color: var(--success);
   font-weight: 600;
