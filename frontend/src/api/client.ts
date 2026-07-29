@@ -36,6 +36,10 @@ export interface UpdateShareInput {
   expires_in_seconds?: number | null;
 }
 
+export interface Stats {
+  share_count: number;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -86,6 +90,10 @@ export function createShare(input: CreateShareInput): Promise<CreatedShare> {
 
 export function getShare(slug: string, token?: string): Promise<ShareView> {
   return request<ShareView>(`/api/shares/${encodeURIComponent(slug)}`, { token });
+}
+
+export function getStats(): Promise<Stats> {
+  return request<Stats>("/api/stats");
 }
 
 export function unlockShare(

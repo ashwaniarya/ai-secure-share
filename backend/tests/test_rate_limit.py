@@ -86,6 +86,13 @@ def test_health_endpoint_is_exempt(client, enabled_limiter, monkeypatch):
     assert codes == [200] * 5
 
 
+def test_stats_endpoint_is_exempt(client, enabled_limiter, monkeypatch):
+    monkeypatch.setattr(settings, "rate_limit_default", "2/minute")
+    ip = _ip(31)
+    codes = [client.get("/api/stats", headers=ip).status_code for _ in range(5)]
+    assert codes == [200] * 5
+
+
 def test_default_limit_is_per_ip(client, enabled_limiter, monkeypatch):
     monkeypatch.setattr(settings, "rate_limit_default", "2/minute")
     monkeypatch.setattr(settings, "rate_limit_create", "100/minute")

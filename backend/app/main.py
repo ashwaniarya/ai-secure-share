@@ -20,6 +20,7 @@ from app.config import settings
 from app.database import Base, engine, get_db
 from app.ratelimit import limiter, rate_limit_exceeded_handler
 from app.routers import shares
+from app.schemas import StatsResponse
 
 
 def _mount_frontend(app: FastAPI) -> None:
@@ -86,6 +87,11 @@ def create_app() -> FastAPI:
     @limiter.exempt
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/api/stats", response_model=StatsResponse)
+    @limiter.exempt
+    def stats(db: Session = Depends(get_db)) -> StatsResponse:
+        return StatsResponse(share_count=crud.count_shares(db))
 
     _mount_frontend(app)
     return app

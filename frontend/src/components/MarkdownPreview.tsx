@@ -57,6 +57,13 @@ export default function MarkdownPreview({
               </code>
             );
           },
+          table({ children, ...props }: ComponentPropsWithoutRef<"table">) {
+            return (
+              <div className="table-scroll">
+                <table {...props}>{children}</table>
+              </div>
+            );
+          },
         }}
       >
         {content}

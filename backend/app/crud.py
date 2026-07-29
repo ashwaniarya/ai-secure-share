@@ -7,7 +7,7 @@ never recoverable afterward.
 
 from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import security
@@ -54,6 +54,10 @@ def create_share(
 
 def get_share(db: Session, slug: str) -> Share | None:
     return db.scalar(select(Share).where(Share.slug == slug))
+
+
+def count_shares(db: Session) -> int:
+    return db.scalar(select(func.count()).select_from(Share)) or 0
 
 
 def update_share(

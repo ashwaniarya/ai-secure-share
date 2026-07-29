@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AgentComposerDemo from "./AgentComposerDemo";
 import InstallPanel from "./InstallPanel";
+import ShareCounter from "./ShareCounter";
 import { copyToClipboard } from "../lib/clipboard";
 import { AGENTS, GITHUB_URL, INSTALL_PROMPT } from "../lib/skill";
 
@@ -49,6 +50,8 @@ export default function Hero() {
           back. First-class in Claude Code, or from any agent via the CLI.
           Prefer the web? Paste below.
         </p>
+
+        <ShareCounter />
 
         <AgentComposerDemo onSend={revealInstall} />
 

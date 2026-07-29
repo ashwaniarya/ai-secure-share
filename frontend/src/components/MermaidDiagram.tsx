@@ -185,6 +185,10 @@ function DiagramViewport({
   reduced: boolean;
   onFullscreen?: () => void;
 }) {
+  // Panning stays off at rest so a one-finger touch drag scrolls the page
+  // instead of being swallowed by the diagram; pinch/buttons/double-tap zoom
+  // first, then panning unlocks. Epsilon absorbs centerOnInit scale jitter.
+  const [zoomed, setZoomed] = useState(false);
   return (
     <div className="mermaid-diagram">
       <TransformWrapper
@@ -200,6 +204,8 @@ function DiagramViewport({
         // zoom — essential when many diagrams are stacked vertically.
         wheel={{ step: 0.2, activationKeys: ["Control", "Meta"] }}
         doubleClick={{ mode: "zoomIn", step: 0.7, animationTime: 0 }}
+        panning={{ disabled: !zoomed }}
+        onTransformed={(_, state) => setZoomed(Math.abs(state.scale - 1) > 0.01)}
         zoomAnimation={{ disabled: reduced }}
         alignmentAnimation={{ disabled: reduced }}
         velocityAnimation={{ disabled: reduced }}
