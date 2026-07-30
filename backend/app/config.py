@@ -61,5 +61,7 @@ class Settings(BaseSettings):
     rate_limit_unlock: str = "5/minute"  # POST .../unlock — password brute-force
     rate_limit_storage_uri: str = "memory://"  # swap to redis:// to share across replicas
 
+    stats_baseline: int = 1200  # vanity offset added to the live share count
+
 
 settings = Settings()

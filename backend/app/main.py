@@ -91,7 +91,9 @@ def create_app() -> FastAPI:
     @app.get("/api/stats", response_model=StatsResponse)
     @limiter.exempt
     def stats(db: Session = Depends(get_db)) -> StatsResponse:
-        return StatsResponse(share_count=crud.count_shares(db))
+        return StatsResponse(
+            share_count=crud.count_shares(db) + settings.stats_baseline
+        )
 
     _mount_frontend(app)
     return app
