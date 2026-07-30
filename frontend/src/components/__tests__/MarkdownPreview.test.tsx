@@ -46,6 +46,12 @@ test("neutralizes javascript: links", () => {
   expect(link?.getAttribute("href") ?? "").not.toContain("javascript:");
 });
 
+test("wraps GFM tables in a horizontal scroll container", () => {
+  const md = "| a | b |\n| - | - |\n| 1 | 2 |";
+  const { container } = render(<MarkdownPreview content={md} />);
+  expect(container.querySelector(".table-scroll table")).not.toBeNull();
+});
+
 test("routes ```mermaid blocks to the diagram renderer with the block source", async () => {
   render(<MarkdownPreview content={"```mermaid\ngraph TD\n  A-->B\n```"} />);
   const diagram = await screen.findByTestId("mermaid-diagram");

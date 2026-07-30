@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import Hero from "../Hero";
+import { getStats } from "../../api/client";
 import { copyToClipboard } from "../../lib/clipboard";
 import { INSTALL_PROMPT } from "../../lib/skill";
 
@@ -9,7 +10,15 @@ vi.mock("../../lib/clipboard", () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),
 }));
 
-afterEach(() => vi.mocked(copyToClipboard).mockClear());
+// Pending by default so sync tests see no late state update (act warnings);
+// the proof-line test resolves it explicitly.
+vi.mock("../../api/client", () => ({
+  getStats: vi.fn(() => new Promise(() => {})),
+}));
+
+afterEach(() => {
+  vi.mocked(copyToClipboard).mockClear();
+});
 
 test("renders the agent-first headline and feature chips", () => {
   render(<Hero />);
@@ -41,6 +50,12 @@ test("clicking the composer send reveals the install panel and copies the prompt
     await screen.findByText(/Install the ai-response-share Claude Code skill/i),
   ).toBeInTheDocument();
   expect(copyToClipboard).toHaveBeenCalledWith(INSTALL_PROMPT);
+});
+
+test("shows the links-created proof line", async () => {
+  vi.mocked(getStats).mockResolvedValueOnce({ share_count: 1234 });
+  render(<Hero />);
+  expect(await screen.findByText(/1,234 links created/i)).toBeInTheDocument();
 });
 
 test("offers a path for other agents", () => {

@@ -93,3 +93,12 @@ def test_delete_share_removes_it(db_session):
     slug = share.slug
     crud.delete_share(db_session, share)
     assert crud.get_share(db_session, slug) is None
+
+
+def test_count_shares_counts_all_shares(db_session):
+    assert crud.count_shares(db_session) == 0
+
+    crud.create_share(db_session, content="a")
+    crud.create_share(db_session, content="b")
+
+    assert crud.count_shares(db_session) == 2

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { createShare, deleteShare, getShare } from "../client";
+import { createShare, deleteShare, getShare, getStats } from "../client";
 
 const fetchMock = vi.fn();
 
@@ -75,6 +75,15 @@ test("throws ApiError carrying the HTTP status on failure", async () => {
   fetchMock.mockResolvedValue(jsonResponse({ detail: "gone" }, 410));
 
   await expect(getShare("abc")).rejects.toMatchObject({ status: 410 });
+});
+
+test("getStats fetches the share count", async () => {
+  fetchMock.mockResolvedValue(jsonResponse({ share_count: 42 }));
+
+  const stats = await getStats();
+
+  expect(stats.share_count).toBe(42);
+  expect(fetchMock.mock.calls[0][0]).toBe("/api/stats");
 });
 
 test("deleteShare sends DELETE with the manage token", async () => {

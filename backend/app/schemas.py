@@ -48,3 +48,7 @@ class UnlockRequest(BaseModel):
 
 class UnlockResponse(BaseModel):
     content: str
+
+
+class StatsResponse(BaseModel):
+    share_count: int

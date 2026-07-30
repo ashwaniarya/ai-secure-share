@@ -237,8 +237,15 @@ button.danger {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+.markdown-preview .table-scroll {
+  overflow-x: auto;
+}
+
 .markdown-preview table {
   border-collapse: collapse;
+  /* Undo the container's overflow-wrap:anywhere so columns keep natural
+     widths and wide tables scroll in .table-scroll instead of squashing. */
+  overflow-wrap: normal;
 }
 
 .markdown-preview th,
@@ -268,9 +275,11 @@ button.danger {
 }
 
 /* The zoom/pan viewport (react-zoom-pan-pinch wrapper) fills the bounded box.
-   grab cursor signals it's draggable when zoomed in. */
+   grab cursor signals it's draggable when zoomed in. pan-y keeps one-finger
+   page scrolling native on touch while pinch goes to the zoom library. */
 .mermaid-diagram-viewport {
   cursor: grab;
+  touch-action: pan-y;
 }
 
 .mermaid-diagram-viewport:active {
@@ -594,6 +603,14 @@ body.home .app {
   color: var(--muted);
 }
 
+.hero-proof {
+  margin: 0;
+  min-height: 1.25em;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 /* agent composer (landing centerpiece) */
 .composer {
   width: 100%;
@@ -695,6 +712,26 @@ body.home .app {
   50.01%,
   100% {
     opacity: 0;
+  }
+}
+
+/* On phones the chip + send button leave ~10ch for the typewriter text; wrap
+   to two rows instead: chip + send on top, animated text below. */
+@media (max-width: 480px) {
+  .composer-bar {
+    flex-wrap: wrap;
+  }
+  .composer-send {
+    order: 1;
+    margin-left: auto;
+  }
+  .composer-task {
+    order: 2;
+    flex: 1 1 auto;
+    min-width: calc(100% - 2rem);
+  }
+  .composer-caret {
+    order: 3;
   }
 }
 
@@ -844,6 +881,24 @@ button.cta-ghost:hover:not(:disabled) {
   .tool-grid {
     grid-template-columns: 1fr;
   }
+  .app {
+    padding: 1.5rem 0.85rem 4rem;
+  }
+  .card {
+    padding: 1.1rem;
+  }
+  .hero-title {
+    font-size: clamp(1.9rem, 7.5vw, 2.6rem);
+  }
+  .diagram-fullscreen {
+    padding: 0.75rem;
+  }
+  /* The close button is position:relative and shifted left by `right:1rem`;
+     with the slimmer padding above that would push it off-screen. */
+  .diagram-fullscreen-close {
+    top: 0.25rem;
+    right: 0.25rem;
+  }
 }
 
 /* success result */
@@ -915,6 +970,9 @@ button.cta-ghost:hover:not(:disabled) {
 }
 .home .hero-sub {
   animation-delay: 0.12s;
+}
+.home .hero-proof {
+  animation-delay: 0.15s;
 }
 .home .composer {
   animation-delay: 0.18s;
