@@ -13,6 +13,7 @@ import {
   isEncrypted,
   parseKeyFromHash,
 } from "../lib/crypto";
+import Masthead from "../components/Masthead";
 
 const EXPIRY_OPTIONS = [
   { label: "Keep current", value: "keep" },
@@ -135,71 +136,95 @@ export default function ManagePage() {
 
   if (deleted) {
     return (
-      <section className="card">
-        <h1>Deleted</h1>
-        <p>This share has been deleted.</p>
-        <p>
-          <Link to="/">Create a new share</Link>
-        </p>
+      <section className="sheet">
+        <Masthead meta="deleted" />
+        <div className="sheet-body">
+          <span className="stamp">record removed</span>
+          <h1>Deleted.</h1>
+          <p className="muted">This share has been deleted.</p>
+          <p>
+            <Link to="/">Create a new share</Link>
+          </p>
+        </div>
       </section>
     );
   }
 
   if (!loaded) {
     return (
-      <form className="card" onSubmit={handleLoad}>
-        <h1>Manage share</h1>
-        <label htmlFor="manage-token">Manage token</label>
-        <input
-          id="manage-token"
-          type="password"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          autoComplete="off"
-        />
-        {error && (
-          <p role="alert" className="error">
-            {error}
-          </p>
-        )}
-        <button type="submit" disabled={!token}>
-          Load
-        </button>
-      </form>
+      <section className="sheet">
+        <Masthead meta={`/s/${slug}/manage`} />
+        <form className="sheet-body" onSubmit={handleLoad}>
+          <span className="stamp">authorization required</span>
+          <h1>Manage share.</h1>
+          <label htmlFor="manage-token">Manage token</label>
+          <input
+            id="manage-token"
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            autoComplete="off"
+          />
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          <div className="actions">
+            <button type="submit" className="cta-primary" disabled={!token}>
+              Load
+            </button>
+          </div>
+        </form>
+      </section>
     );
   }
 
   if (pendingEnvelope) {
     return (
-      <form className="card" onSubmit={handleApplyPastedKey}>
-        <h1>Encryption key needed</h1>
-        <p>
-          This share is end-to-end encrypted, but this link is missing its key —
-          the part after <code>#k=</code>. Paste that key to edit the content.
-        </p>
-        <label htmlFor="manage-key">Encryption key</label>
-        <input
-          id="manage-key"
-          type="text"
-          value={pastedKey}
-          onChange={(e) => setPastedKey(e.target.value)}
-          autoComplete="off"
-        />
-        {error && (
-          <p role="alert" className="error">
-            {error}
+      <section className="sheet">
+        <Masthead meta={`/s/${slug}/manage`} />
+        <form className="sheet-body" onSubmit={handleApplyPastedKey}>
+          <span className="stamp">key required</span>
+          <h1>Encryption key needed.</h1>
+          <p className="muted hint">
+            This share is end-to-end encrypted, but this link is missing its key
+            — the part after <code>#k=</code>. Paste that key to edit the
+            content.
           </p>
-        )}
-        <button type="submit" disabled={!pastedKey.trim()}>
-          Unlock for editing
-        </button>
-      </form>
+          <label htmlFor="manage-key">Encryption key</label>
+          <input
+            id="manage-key"
+            type="text"
+            value={pastedKey}
+            onChange={(e) => setPastedKey(e.target.value)}
+            autoComplete="off"
+          />
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
+          <div className="actions">
+            <button
+              type="submit"
+              className="cta-primary"
+              disabled={!pastedKey.trim()}
+            >
+              Unlock for editing
+            </button>
+          </div>
+        </form>
+      </section>
     );
   }
 
   return (
-    <form className="card" onSubmit={handleSave}>
-      <h1>Edit share</h1>
+    <section className="sheet">
+      <Masthead meta={`/s/${slug}/manage`} />
+      <form className="sheet-body" onSubmit={handleSave}>
+      <span className="stamp">editing record</span>
+      <h1>Edit share.</h1>
 
       <label htmlFor="manage-content">Markdown</label>
       <textarea
@@ -248,7 +273,9 @@ export default function ManagePage() {
       )}
 
       <div className="actions">
-        <button type="submit">Save changes</button>
+        <button type="submit" className="cta-primary">
+          Save changes
+        </button>
         {confirmingDelete ? (
           <>
             <button
@@ -272,6 +299,7 @@ export default function ManagePage() {
           </button>
         )}
       </div>
-    </form>
+      </form>
+    </section>
   );
 }

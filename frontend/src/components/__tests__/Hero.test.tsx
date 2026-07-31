@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, test, vi } from "vitest";
 import Hero from "../Hero";
 import { getStats } from "../../api/client";
@@ -11,37 +12,52 @@ vi.mock("../../lib/clipboard", () => ({
 }));
 
 // Pending by default so sync tests see no late state update (act warnings);
-// the proof-line test resolves it explicitly.
+// the counter test resolves it explicitly.
 vi.mock("../../api/client", () => ({
   getStats: vi.fn(() => new Promise(() => {})),
 }));
+
+const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
+
+function renderHero() {
+  return render(
+    <MemoryRouter future={ROUTER_FUTURE}>
+      <Hero />
+    </MemoryRouter>,
+  );
+}
 
 afterEach(() => {
   vi.mocked(copyToClipboard).mockClear();
 });
 
 test("renders the agent-first headline and feature chips", () => {
-  render(<Hero />);
+  renderHero();
   expect(
     screen.getByRole("heading", {
-      name: /turn any AI response into a shareable link/i,
+      name: /your AI does the work/i,
     }),
   ).toBeInTheDocument();
-  expect(screen.getByText(/from your AI agent/i)).toBeInTheDocument();
-  for (const chip of [/XSS-safe/i, /password/i, /expiry/i, /rich link previews/i]) {
+  expect(screen.getByText(/from the agents they already use/i)).toBeInTheDocument();
+  // "no accounts" is deliberately excluded — it also appears in the masthead.
+  for (const chip of [
+    /unfurls in slack/i,
+    /end-to-end encrypted/i,
+    /password \+ expiry/i,
+  ]) {
     expect(screen.getByText(chip)).toBeInTheDocument();
   }
 });
 
 test("lists the agents it works with", () => {
-  render(<Hero />);
-  expect(screen.getByText("Claude Code")).toBeInTheDocument();
-  expect(screen.getByText("Cursor")).toBeInTheDocument();
+  renderHero();
+  expect(screen.getAllByText("Claude Code").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Cursor").length).toBeGreaterThan(0);
 });
 
 test("clicking the composer send reveals the install panel and copies the prompt", async () => {
   const user = userEvent.setup();
-  render(<Hero />);
+  renderHero();
   expect(
     screen.queryByText(/Install the ai-response-share Claude Code skill/i),
   ).not.toBeInTheDocument();
@@ -52,14 +68,14 @@ test("clicking the composer send reveals the install panel and copies the prompt
   expect(copyToClipboard).toHaveBeenCalledWith(INSTALL_PROMPT);
 });
 
-test("shows the links-created proof line", async () => {
+test("shows the live share count in the provenance rail", async () => {
   vi.mocked(getStats).mockResolvedValueOnce({ share_count: 1234 });
-  render(<Hero />);
-  expect(await screen.findByText(/1,234 links created/i)).toBeInTheDocument();
+  renderHero();
+  expect(await screen.findByText("1,234")).toBeInTheDocument();
 });
 
 test("offers a path for other agents", () => {
-  render(<Hero />);
-  const link = screen.getByRole("link", { name: /using another agent/i });
+  renderHero();
+  const link = screen.getByRole("link", { name: /roll it out to your team/i });
   expect(link).toHaveAttribute("href", expect.stringContaining("github.com"));
 });

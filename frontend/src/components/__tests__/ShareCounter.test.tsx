@@ -16,7 +16,7 @@ beforeEach(() => {
 test("shows the formatted count once loaded", async () => {
   vi.mocked(getStats).mockResolvedValue({ share_count: 12345 });
   render(<ShareCounter />);
-  expect(await screen.findByText(/12,345 links created/i)).toBeInTheDocument();
+  expect(await screen.findByText("12,345")).toBeInTheDocument();
 });
 
 test("stays hidden when the stats request fails", async () => {

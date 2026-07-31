@@ -5,7 +5,7 @@ const POLL_INTERVAL_MS = 30_000;
 // A tiny count is anti-social-proof; stay hidden until it looks alive.
 const MIN_VISIBLE_COUNT = 10;
 
-/** Social-proof line under the hero subtitle; hides itself on failure. */
+/** Live share count, rendered as a rail entry. Hides itself on failure. */
 export default function ShareCounter() {
   const [count, setCount] = useState<number | null>(null);
 
@@ -30,11 +30,12 @@ export default function ShareCounter() {
     };
   }, []);
 
+  if (count === null || count < MIN_VISIBLE_COUNT) return null;
+
   return (
-    <p className="hero-proof">
-      {count !== null && count >= MIN_VISIBLE_COUNT
-        ? `${count.toLocaleString()} links created so far`
-        : null}
-    </p>
+    <div className="rail-item">
+      shared
+      <span className="rail-value">{count.toLocaleString()}</span>
+    </div>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ApiError, getShare, unlockShare } from "../api/client";
+import { ApiError, getShare, unlockShare, type ShareView } from "../api/client";
 import { decrypt, isEncrypted, parseKeyFromHash } from "../lib/crypto";
 import MarkdownPreview from "../components/MarkdownPreview";
+import Masthead from "../components/Masthead";
+import ProvenanceRail, { type RailEntry } from "../components/ProvenanceRail";
 import ViewQuickActions from "../components/ViewQuickActions";
 
 type Status =
@@ -15,16 +17,57 @@ type Status =
   | "need_key"
   | "decrypt_error";
 
+/** What the rail can state about a share, all of it sourced from the record. */
+interface Provenance {
+  created_at: string;
+  expires_at: string | null;
+  has_password: boolean;
+  encrypted: boolean;
+}
+
 function Message({ title, body }: { title: string; body: string }) {
   return (
-    <section className="card">
-      <h1>{title}</h1>
-      <p>{body}</p>
-      <p>
-        <Link to="/">Create a share</Link>
-      </p>
+    <section className="sheet">
+      <Masthead />
+      <div className="sheet-body">
+        <h1>{title}</h1>
+        <p className="muted">{body}</p>
+        <p>
+          <Link to="/">Create a share</Link>
+        </p>
+      </div>
     </section>
   );
+}
+
+function formatDate(value: string): string {
+  const parsed = new Date(value.endsWith("Z") ? value : `${value}Z`);
+  if (Number.isNaN(parsed.getTime())) return "Unknown";
+  return parsed.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function railEntries(provenance: Provenance): RailEntry[] {
+  return [
+    { label: "created", values: [formatDate(provenance.created_at)] },
+    {
+      label: "expires",
+      values: [
+        provenance.expires_at ? formatDate(provenance.expires_at) : "Never",
+      ],
+    },
+    {
+      label: "access",
+      values: [provenance.has_password ? "Password" : "Public link"],
+    },
+    {
+      label: "cipher",
+      values: [provenance.encrypted ? "AES-256-GCM" : "Plaintext"],
+    },
+  ];
 }
 
 /**
@@ -55,10 +98,20 @@ async function resolveContent(raw: string): Promise<ResolvedContent> {
   }
 }
 
+function toProvenance(view: ShareView, raw: string): Provenance {
+  return {
+    created_at: view.created_at,
+    expires_at: view.expires_at,
+    has_password: view.has_password,
+    encrypted: isEncrypted(raw),
+  };
+}
+
 export default function ViewPage() {
   const { slug = "" } = useParams();
   const [status, setStatus] = useState<Status>("loading");
   const [content, setContent] = useState<string | null>(null);
+  const [provenance, setProvenance] = useState<Provenance | null>(null);
   const [password, setPassword] = useState("");
   const [unlockError, setUnlockError] = useState<string | null>(null);
 
@@ -67,11 +120,13 @@ export default function ViewPage() {
     getShare(slug)
       .then(async (view) => {
         if (!active) return;
+        const raw = view.content ?? "";
+        setProvenance(toProvenance(view, raw));
         if (view.has_password && view.content === null) {
           setStatus("locked");
           return;
         }
-        const resolved = await resolveContent(view.content ?? "");
+        const resolved = await resolveContent(raw);
         if (!active) return;
         if (resolved.kind === "ready") {
           setContent(resolved.markdown);
@@ -97,6 +152,9 @@ export default function ViewPage() {
     try {
       const unlocked = await unlockShare(slug, password);
       const resolved = await resolveContent(unlocked.content);
+      setProvenance((prev) =>
+        prev ? { ...prev, encrypted: isEncrypted(unlocked.content) } : prev,
+      );
       if (resolved.kind === "ready") {
         setContent(resolved.markdown);
         setStatus("ready");
@@ -108,7 +166,15 @@ export default function ViewPage() {
     }
   }
 
-  if (status === "loading") return <p className="card">Loading…</p>;
+  if (status === "loading")
+    return (
+      <section className="sheet">
+        <Masthead meta={`/s/${slug}`} />
+        <div className="sheet-body">
+          <p className="muted">Loading…</p>
+        </div>
+      </section>
+    );
   if (status === "not_found")
     return <Message title="Not found" body="This share does not exist." />;
   if (status === "expired")
@@ -134,32 +200,46 @@ export default function ViewPage() {
 
   if (status === "locked") {
     return (
-      <form className="card" onSubmit={handleUnlock}>
-        <h1>Password required</h1>
-        <label htmlFor="view-password">Password</label>
-        <input
-          id="view-password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="off"
-        />
-        {unlockError && (
-          <p role="alert" className="error">
-            {unlockError}
-          </p>
-        )}
-        <button type="submit">Unlock</button>
-      </form>
+      <section className="sheet">
+        <Masthead meta={`/s/${slug}`} />
+        <form className="sheet-body" onSubmit={handleUnlock}>
+          <span className="stamp">password required</span>
+          <h1>This share is locked.</h1>
+          <label htmlFor="view-password">Password</label>
+          <input
+            id="view-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="off"
+          />
+          {unlockError && (
+            <p role="alert" className="error">
+              {unlockError}
+            </p>
+          )}
+          <div className="actions">
+            <button type="submit" className="cta-primary">
+              Unlock
+            </button>
+          </div>
+        </form>
+      </section>
     );
   }
 
   return (
-    <article className="card">
-      <MarkdownPreview content={content ?? ""} />
-      <p className="muted">
-        <Link to={`/s/${slug}/manage`}>Manage this share</Link>
-      </p>
+    <article className="sheet">
+      <Masthead meta={`/s/${slug}`} />
+      <div className="sheet-grid">
+        {provenance && <ProvenanceRail entries={railEntries(provenance)} />}
+        <div className="sheet-body">
+          <MarkdownPreview content={content ?? ""} />
+          <p className="muted">
+            <Link to={`/s/${slug}/manage`}>Manage this share</Link>
+          </p>
+        </div>
+      </div>
       <ViewQuickActions />
     </article>
   );
