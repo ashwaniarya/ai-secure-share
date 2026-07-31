@@ -5,7 +5,7 @@ const POLL_INTERVAL_MS = 30_000;
 // A tiny count is anti-social-proof; stay hidden until it looks alive.
 const MIN_VISIBLE_COUNT = 10;
 
-/** Social-proof line under the hero subtitle; hides itself on failure. */
+/** Live share count, rendered as a rail entry. Hides itself on failure. */
 export default function ShareCounter() {
   const [count, setCount] = useState<number | null>(null);
 
@@ -17,7 +17,11 @@ export default function ShareCounter() {
         .then((stats) => {
           if (active) setCount(stats.share_count);
         })
-        .catch(() => {});
+        .catch((error) => {
+          // The counter hides itself on failure, so without this an outage is
+          // indistinguishable from a genuinely small count.
+          console.error("[ShareCounter] stats request failed", error);
+        });
     }
 
     load();
@@ -30,11 +34,16 @@ export default function ShareCounter() {
     };
   }, []);
 
+  // The declared type is a compile-time claim about an untrusted payload: a
+  // missing or renamed share_count arrives as undefined, which slips past both
+  // a null check and a `< MIN` comparison and would crash the render.
+  if (typeof count !== "number" || !Number.isFinite(count)) return null;
+  if (count < MIN_VISIBLE_COUNT) return null;
+
   return (
-    <p className="hero-proof">
-      {count !== null && count >= MIN_VISIBLE_COUNT
-        ? `${count.toLocaleString()} links created so far`
-        : null}
-    </p>
+    <div className="rail-item">
+      shared
+      <span className="rail-value">{count.toLocaleString()}</span>
+    </div>
   );
 }

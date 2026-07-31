@@ -9,18 +9,23 @@ export const INSTALL_PROMPT = `Install the ai-response-share Claude Code skill:
 3. Verify the install with a create → read → delete round trip using
    skill/ai-response-share/scripts/share.py, and show me the share URL it created.`;
 
-/** Rotating hero examples — deliberately a mix of developer and non-developer tasks. */
+/** Rotating hero examples — the work a team actually hands off in a week. */
 export const SKILL_EXAMPLES = [
-  "create a shareable plan to send to my boss",
   "share this API design with the team",
-  "turn these meeting notes into a link",
-  "save this recipe and send mom the link",
-  "publish my study guide",
-  "share this bug report",
+  "turn this postmortem into a link",
+  "send the sprint plan to my PM",
+  "publish these architecture docs",
+  "share this bug analysis with on-call",
 ];
 
 /**
  * Agents the skill works with. Claude Code is the first-class integration (the
  * packaged skill); the rest run the agent-agnostic share.py CLI.
  */
-export const AGENTS = ["Claude Code", "Cursor", "Codex", "Copilot CLI", "Cline"];
+export const AGENTS: [string, ...string[]] = [
+  "Claude Code",
+  "Cursor",
+  "Codex",
+  "Copilot CLI",
+  "Cline",
+];

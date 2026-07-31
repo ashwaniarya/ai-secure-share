@@ -1,19 +1,21 @@
 import { useState } from "react";
 import AgentComposerDemo from "./AgentComposerDemo";
 import InstallPanel from "./InstallPanel";
+import Masthead from "./Masthead";
+import ProvenanceRail from "./ProvenanceRail";
 import ShareCounter from "./ShareCounter";
 import { copyToClipboard } from "../lib/clipboard";
 import { AGENTS, GITHUB_URL, INSTALL_PROMPT } from "../lib/skill";
 
 const CHIPS = [
-  "🔐 End-to-end encrypted",
-  "🛡 XSS-safe",
-  "🔒 Optional password",
-  "⏱ Auto-expiry",
-  "🔗 Rich link previews",
+  "unfurls in slack",
+  "code · tables · diagrams",
+  "end-to-end encrypted",
+  "password + expiry",
+  "no accounts",
 ];
 
-/** Landing hero: brand, agent-first headline, the composer, and the install panel. */
+/** Landing hero: the record's masthead, its reach, and the agent-first pitch. */
 export default function Hero() {
   const [showInstall, setShowInstall] = useState(false);
 
@@ -23,75 +25,57 @@ export default function Hero() {
   }
 
   return (
-    <>
-      <nav className="home-nav">
-        <span className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            ✦
-          </span>
-          ai-response-share
-        </span>
-        <div className="home-nav-links">
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-            GitHub
-          </a>
-          <a href="#create">Paste markdown</a>
-        </div>
-      </nav>
+    <div className="sheet">
+      <Masthead meta="encrypted · no accounts · open source" />
+      <div className="sheet-grid">
+        <ProvenanceRail
+          entries={[
+            { label: "agents", values: [...AGENTS, "+ any via CLI"] },
+          ]}
+        >
+          <ShareCounter />
+        </ProvenanceRail>
 
-      <div className="hero">
-        <h1 className="hero-title">
-          Turn any AI response into a{" "}
-          <span className="hero-accent">shareable link</span>.
-          <span className="hero-kicker">From your AI agent.</span>
-        </h1>
-        <p className="hero-sub">
-          Ask your AI agent to share any answer — get a clean, rendered link
-          back. First-class in Claude Code, or from any agent via the CLI.
-          Prefer the web? Paste below.
-        </p>
+        <div className="sheet-body">
+          <span className="stamp">provenance included</span>
+          <h1 className="hero-title">
+            Your AI does the work.{" "}
+            <span className="hero-accent">Now your whole team can see it.</span>
+            <span className="hero-kicker">From the agents they already use</span>
+          </h1>
+          <p className="hero-sub">
+            Plans, designs, specs, postmortems — every answer becomes a rendered
+            link that carries where it came from, who can open it, and when it
+            expires.
+          </p>
 
-        <ShareCounter />
+          <AgentComposerDemo onSend={revealInstall} />
 
-        <AgentComposerDemo onSend={revealInstall} />
+          {showInstall && <InstallPanel />}
 
-        {showInstall && <InstallPanel />}
-
-        <div className="install-cta">
-          <button type="button" className="cta-primary" onClick={revealInstall}>
-            Add to Claude Code
-          </button>
-          <a
-            className="cta-ghost"
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Using another agent? →
-          </a>
-        </div>
-
-        <p className="agents-row">
-          <span className="agents-label">Works in</span>
-          {AGENTS.map((agent, index) => (
-            <span
-              key={agent}
-              className={`agent${index === 0 ? " agent-primary" : ""}`}
+          <div className="install-cta">
+            <button type="button" className="cta-primary" onClick={revealInstall}>
+              Add to Claude Code
+            </button>
+            <a
+              className="cta-ghost"
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
             >
-              {agent}
-            </span>
-          ))}
-          <span className="agent agent-muted">+ any agent via CLI</span>
-        </p>
+              Roll it out to your team
+            </a>
+          </div>
 
-        <ul className="chips">
-          {CHIPS.map((chip) => (
-            <li className="chip" key={chip}>
-              {chip}
-            </li>
-          ))}
-        </ul>
+          <ul className="chips">
+            {CHIPS.map((chip) => (
+              <li className="chip" key={chip}>
+                {chip}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

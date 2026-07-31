@@ -4,7 +4,7 @@ Centralizes the few knobs the service needs so the rest of the code never
 reads ``os.environ`` directly.
 """
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     rate_limit_create: str = "20/minute"  # POST /api/shares — anti-spam
     rate_limit_unlock: str = "5/minute"  # POST .../unlock — password brute-force
     rate_limit_storage_uri: str = "memory://"  # swap to redis:// to share across replicas
+
+    # Vanity offset added to the live share count. Never negative: a negative
+    # total would fail the frontend's visibility guard and silently hide the
+    # counter, which is indistinguishable from the stats route being down.
+    stats_baseline: int = Field(default=1200, ge=0)
 
 
 settings = Settings()

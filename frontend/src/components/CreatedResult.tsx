@@ -1,4 +1,5 @@
 import type { CreatedShare } from "../api/client";
+import Masthead from "./Masthead";
 import { copyToClipboard } from "../lib/clipboard";
 import { toAbsoluteUrl } from "../lib/url";
 
@@ -7,7 +8,7 @@ interface CreatedResultProps {
   onCreateAnother: () => void;
 }
 
-/** Celebratory success screen shown after a share is created. */
+/** Handoff screen: the link, and the one-time token that can never be reissued. */
 export default function CreatedResult({
   share,
   onCreateAnother,
@@ -17,50 +18,53 @@ export default function CreatedResult({
   const shareUrl = toAbsoluteUrl(share.url);
 
   return (
-    <section className="card result-card">
-      <div className="result-emoji" aria-hidden="true">
-        ✨
-      </div>
-      <h1 className="result-title">Your link is ready</h1>
-      <p className="muted">Anyone with this link can read your markdown:</p>
+    <section className="sheet">
+      <Masthead meta="saved" />
+      <div className="sheet-body">
+        <span className="stamp">record created</span>
+        <h1 className="result-title">Your link is ready.</h1>
+        <p className="muted hint">Anyone with this link can read your markdown.</p>
 
-      <a className="share-url" href={shareUrl}>
-        {shareUrl}
-      </a>
-      <div className="result-actions">
-        <button
-          type="button"
-          className="cta-primary"
-          onClick={() => copyToClipboard(shareUrl)}
-        >
-          Copy link
-        </button>
-        <a
-          className="cta-ghost"
-          href={shareUrl}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open link ↗
+        <a className="share-url" href={shareUrl}>
+          {shareUrl}
         </a>
-      </div>
 
-      <p className="warning">
-        Save your manage token now — it is shown only once and is required to
-        edit or delete this share.
-      </p>
-      <div className="token-row">
-        <code>{share.manage_token}</code>
-        <button type="button" onClick={() => copyToClipboard(share.manage_token)}>
-          Copy token
-        </button>
-      </div>
+        <p className="warning">manage token — shown once</p>
+        <div className="token-row">
+          <code>{share.manage_token}</code>
+          <button
+            type="button"
+            onClick={() => copyToClipboard(share.manage_token)}
+          >
+            Copy token
+          </button>
+        </div>
+        <p className="muted hint">
+          Store it now. It is the only way to edit or delete this share, and it
+          is never recoverable.
+        </p>
 
-      <p>
-        <button type="button" className="cta-ghost" onClick={onCreateAnother}>
-          ← Create another
-        </button>
-      </p>
+        <div className="result-actions">
+          <button
+            type="button"
+            className="cta-primary"
+            onClick={() => copyToClipboard(shareUrl)}
+          >
+            Copy link
+          </button>
+          <a
+            className="cta-ghost"
+            href={shareUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open link
+          </a>
+          <button type="button" className="cta-ghost" onClick={onCreateAnother}>
+            Create another
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

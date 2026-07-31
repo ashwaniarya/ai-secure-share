@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, test, vi } from "vitest";
 import CreatedResult from "../CreatedResult";
 import { copyToClipboard } from "../../lib/clipboard";
@@ -10,6 +11,16 @@ vi.mock("../../lib/clipboard", () => ({
 
 afterEach(() => vi.mocked(copyToClipboard).mockClear());
 
+const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
+
+function renderResult(share: Parameters<typeof CreatedResult>[0]["share"], onCreateAnother = () => {}) {
+  return render(
+    <MemoryRouter future={ROUTER_FUTURE}>
+      <CreatedResult share={share} onCreateAnother={onCreateAnother} />
+    </MemoryRouter>,
+  );
+}
+
 const share = {
   slug: "aB3x9",
   manage_token: "secret-token",
@@ -18,15 +29,16 @@ const share = {
 };
 
 test("renders the link, manage token, and once-only warning", () => {
-  render(<CreatedResult share={share} onCreateAnother={() => {}} />);
+  renderResult(share);
   expect(screen.getByText(share.url)).toBeInTheDocument();
   expect(screen.getByText("secret-token")).toBeInTheDocument();
-  expect(screen.getByText(/shown only once/i)).toBeInTheDocument();
+  expect(screen.getByText(/shown once/i)).toBeInTheDocument();
+  expect(screen.getByText(/never recoverable/i)).toBeInTheDocument();
 });
 
 test("copies the link", async () => {
   const user = userEvent.setup();
-  render(<CreatedResult share={share} onCreateAnother={() => {}} />);
+  renderResult(share);
   await user.click(screen.getByRole("button", { name: /copy link/i }));
   expect(copyToClipboard).toHaveBeenCalledWith(share.url);
 });
@@ -34,7 +46,7 @@ test("copies the link", async () => {
 test("invokes onCreateAnother", async () => {
   const onCreateAnother = vi.fn();
   const user = userEvent.setup();
-  render(<CreatedResult share={share} onCreateAnother={onCreateAnother} />);
+  renderResult(share, onCreateAnother);
   await user.click(screen.getByRole("button", { name: /create another/i }));
   expect(onCreateAnother).toHaveBeenCalledOnce();
 });
@@ -52,19 +64,22 @@ const absoluteUrl =
   "https://airesponseshare.com/s/EBASTkuqVc8#k=Gjzoa4Sz4XmajYMp1X4Je6I2BtLLCLahv0SkMv71OAg";
 
 test("renders absolute hrefs when the server URL has no scheme", () => {
-  render(<CreatedResult share={schemelessShare} onCreateAnother={() => {}} />);
-  const links = screen.getAllByRole("link");
-  expect(links.length).toBeGreaterThan(0);
-  for (const link of links) {
+  renderResult(schemelessShare);
+  // Every link that points at the share (i.e. not the masthead's home link)
+  // must carry the absolute URL, both as an attribute and once resolved.
+  const shareLinks = screen
+    .getAllByRole("link")
+    .filter((link) => link.getAttribute("href") !== "/");
+  expect(shareLinks.length).toBeGreaterThan(0);
+  for (const link of shareLinks) {
     expect(link.getAttribute("href")).toBe(absoluteUrl);
-    // The resolved DOM href must not duplicate the host against the page origin.
     expect(link).toHaveProperty("href", absoluteUrl);
   }
 });
 
 test("copies an absolute URL when the server URL has no scheme", async () => {
   const user = userEvent.setup();
-  render(<CreatedResult share={schemelessShare} onCreateAnother={() => {}} />);
+  renderResult(schemelessShare);
   await user.click(screen.getByRole("button", { name: /copy link/i }));
   expect(copyToClipboard).toHaveBeenCalledWith(absoluteUrl);
 });

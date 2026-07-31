@@ -80,8 +80,8 @@ export default function CreatePage() {
         <>
           <Hero />
           <section className="create-tool" id="create">
-            <div className="tool-divider">Prefer the web? Paste markdown below</div>
-            <form className="card tool-card" onSubmit={handleSubmit}>
+            <div className="tool-divider">or paste markdown</div>
+            <form className="sheet sheet-body" onSubmit={handleSubmit}>
               <div className="tool-grid">
                 <div className="tool-editor">
                   <label htmlFor="content">Markdown</label>
@@ -141,7 +141,7 @@ export default function CreatePage() {
                     className="cta-primary"
                     disabled={submitting || !content.trim()}
                   >
-                    {submitting ? "Creating…" : "Create link →"}
+                    {submitting ? "Creating…" : "Create link"}
                   </button>
                 </div>
                 <div className="tool-preview">
