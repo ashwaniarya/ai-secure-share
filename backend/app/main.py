@@ -12,13 +12,16 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import Session
 
 from app import crud, models, preview  # noqa: F401  (models import registers ORM tables)
 from app.config import settings
 from app.database import Base, engine, get_db
-from app.ratelimit import limiter, rate_limit_exceeded_handler
+from app.ratelimit import (
+    enforce_default_rate_limit,
+    limiter,
+    rate_limit_exceeded_handler,
+)
 from app.routers import shares
 from app.schemas import StatsResponse
 
@@ -70,13 +73,15 @@ def _mount_frontend(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="AI Response Share")
+    # Central rate limiting: an app-level dependency applies the per-IP default
+    # to API routes; create/unlock add tighter limits (see routers/shares.py).
+    app = FastAPI(
+        title="AI Response Share",
+        dependencies=[Depends(enforce_default_rate_limit)],
+    )
 
-    # Central rate limiting: SlowAPIMiddleware applies the per-IP default to API
-    # routes; create/unlock override it (see routers/shares.py).
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-    app.add_middleware(SlowAPIMiddleware)
 
     # No migration tool for v1: create tables on startup if absent.
     Base.metadata.create_all(bind=engine)
