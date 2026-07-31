@@ -5,7 +5,9 @@
   --paper-raised: #ffffff;
   --ink: #14130f;
   --ink-soft: #4a463c;
-  --muted: #8a8375;
+  /* Every small label on the site uses this, much of it at 0.58rem, so it has
+     to clear WCAG AA (4.5:1) against paper — it sits at 5.03:1. */
+  --muted: #6b6558;
   --rule: #ddd7c8;
   --rule-soft: #e6e0d2;
   --accent: #a33b1f;
@@ -69,12 +71,10 @@ body.view-full .app {
 
 /* ---- machine voice ------------------------------------------------------ */
 
-.mono-label,
 .stamp,
 .masthead,
 .rail,
 .composer-hint,
-.agents-row,
 .chip,
 .tool-section-label,
 .tool-divider,
@@ -269,21 +269,6 @@ code {
   font-size: 1.02rem;
   line-height: 1.62;
   color: var(--ink-soft);
-}
-
-.hero-proof {
-  margin: 1rem 0 0;
-  min-height: 1.2em;
-  font-family: var(--font-mono);
-  font-size: 0.63rem;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.hero-proof b {
-  color: var(--ink);
-  font-weight: 700;
 }
 
 /* ---- composer (landing centerpiece) ------------------------------------- */
@@ -482,30 +467,7 @@ button.danger:hover:not(:disabled) {
   flex-wrap: wrap;
 }
 
-/* ---- agents + chips ----------------------------------------------------- */
-
-.agents-row {
-  margin: 1.15rem 0 0;
-  font-size: 0.6rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  line-height: 1.9;
-}
-
-.agents-label {
-  margin-right: 0.4rem;
-}
-
-.agent + .agent::before {
-  content: "· ";
-  color: var(--rule);
-}
-
-.agent-primary {
-  color: var(--accent);
-  font-weight: 700;
-}
+/* ---- chips -------------------------------------------------------------- */
 
 .chips {
   list-style: none;
@@ -693,14 +655,6 @@ select:focus {
 }
 
 /* ---- created result ----------------------------------------------------- */
-
-.result-card {
-  align-items: stretch;
-}
-
-.result-emoji {
-  display: none;
-}
 
 .result-title {
   margin: 0 0 0.5rem;
@@ -960,6 +914,7 @@ select:focus {
 }
 
 .diagram-zoom-controls button {
+  position: relative;
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;
@@ -969,11 +924,6 @@ select:focus {
   align-items: center;
   justify-content: center;
   font-size: 0.8rem;
-}
-
-.diagram-zoom-controls button:hover:not(:disabled) {
-  background: var(--rule-soft);
-  color: var(--ink);
 }
 
 .diagram-fullscreen {
@@ -997,8 +947,63 @@ select:focus {
   top: 1rem;
   right: 1rem;
   z-index: 101;
-  background: var(--paper) !important;
+  background: var(--paper);
   border: 1px solid var(--ink);
+}
+
+/* Control buttons keep a paper background on hover. Without this they inherit
+   the global button hover (ink fill, paper text) and the glyph — an SVG using
+   currentColor — turns paper-on-paper and disappears under the cursor. */
+.quick-actions button:hover:not(:disabled),
+.diagram-zoom-controls button:hover:not(:disabled),
+.diagram-fullscreen-close:hover:not(:disabled) {
+  background: var(--rule-soft);
+  color: var(--accent);
+}
+
+.quick-actions button[aria-pressed="true"] {
+  background: var(--rule-soft);
+  color: var(--accent);
+}
+
+.quick-actions button:focus-visible,
+.diagram-zoom-controls button:focus-visible,
+.diagram-fullscreen-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* CSS-only tooltips, shown on hover and keyboard focus. These controls are
+   icon-only, so without them a sighted mouse user gets no label at all. */
+.quick-actions button::after,
+.diagram-zoom-controls button::after,
+.diagram-fullscreen-close::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 0.55rem);
+  right: 0;
+  white-space: nowrap;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.5rem;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.quick-actions button:hover::after,
+.quick-actions button:focus-visible::after,
+.diagram-zoom-controls button:hover::after,
+.diagram-zoom-controls button:focus-visible::after,
+.diagram-fullscreen-close:hover::after,
+.diagram-fullscreen-close:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ---- view quick actions ------------------------------------------------- */
@@ -1017,6 +1022,7 @@ select:focus {
 }
 
 .quick-actions button {
+  position: relative;
   min-width: 1.9rem;
   height: 1.9rem;
   padding: 0 0.3rem;
@@ -1026,11 +1032,6 @@ select:focus {
   align-items: center;
   justify-content: center;
   font-size: 0.68rem;
-}
-
-.quick-actions button:hover:not(:disabled) {
-  background: var(--rule-soft);
-  color: var(--ink);
 }
 
 .quick-actions-divider {
@@ -1087,17 +1088,11 @@ body.home .hero-title {
 body.home .hero-sub {
   animation-delay: 0.1s;
 }
-body.home .hero-proof {
-  animation-delay: 0.14s;
-}
 body.home .composer {
   animation-delay: 0.18s;
 }
 body.home .install-cta {
   animation-delay: 0.22s;
-}
-body.home .agents-row {
-  animation-delay: 0.26s;
 }
 body.home .chips {
   animation-delay: 0.3s;

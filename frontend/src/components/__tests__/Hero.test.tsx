@@ -5,7 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import Hero from "../Hero";
 import { getStats } from "../../api/client";
 import { copyToClipboard } from "../../lib/clipboard";
-import { INSTALL_PROMPT } from "../../lib/skill";
+import { AGENTS, INSTALL_PROMPT } from "../../lib/skill";
 
 vi.mock("../../lib/clipboard", () => ({
   copyToClipboard: vi.fn().mockResolvedValue(true),
@@ -51,18 +51,15 @@ test("renders the agent-first headline and feature chips", () => {
 
 test("lists the agents it works with", () => {
   renderHero();
-  // Agents render twice — in the rail and in the agents row — so scope to each
-  // source. An unscoped count passes when either one is deleted.
+  // Scoped to the rail: an unscoped query would pass even if the rail were
+  // deleted, since the agents used to be duplicated elsewhere on the page.
   const rail = within(
     screen.getByRole("complementary", { name: /record details/i }),
   );
-  expect(rail.getByText("Claude Code")).toBeInTheDocument();
-  expect(rail.getByText("Cursor")).toBeInTheDocument();
-  expect(
-    within(screen.getByText(/works in/i).closest("p") as HTMLElement).getByText(
-      "Claude Code",
-    ),
-  ).toBeInTheDocument();
+  for (const agent of AGENTS) {
+    expect(rail.getByText(agent)).toBeInTheDocument();
+  }
+  expect(rail.getByText(/any via CLI/i)).toBeInTheDocument();
 });
 
 test("clicking the composer send reveals the install panel and copies the prompt", async () => {

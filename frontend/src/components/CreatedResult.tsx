@@ -18,7 +18,7 @@ export default function CreatedResult({
   const shareUrl = toAbsoluteUrl(share.url);
 
   return (
-    <section className="sheet result-card">
+    <section className="sheet">
       <Masthead meta="saved" />
       <div className="sheet-body">
         <span className="stamp">record created</span>

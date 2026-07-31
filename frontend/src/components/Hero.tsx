@@ -28,7 +28,11 @@ export default function Hero() {
     <div className="sheet">
       <Masthead meta="encrypted · no accounts · open source" />
       <div className="sheet-grid">
-        <ProvenanceRail entries={[{ label: "agents", values: AGENTS }]}>
+        <ProvenanceRail
+          entries={[
+            { label: "agents", values: [...AGENTS, "+ any via CLI"] },
+          ]}
+        >
           <ShareCounter />
         </ProvenanceRail>
 
@@ -62,19 +66,6 @@ export default function Hero() {
               Roll it out to your team
             </a>
           </div>
-
-          <p className="agents-row">
-            <span className="agents-label">Works in</span>
-            {AGENTS.map((agent, index) => (
-              <span
-                key={agent}
-                className={`agent${index === 0 ? " agent-primary" : ""}`}
-              >
-                {agent}
-              </span>
-            ))}
-            <span className="agent agent-muted">+ any agent via CLI</span>
-          </p>
 
           <ul className="chips">
             {CHIPS.map((chip) => (
