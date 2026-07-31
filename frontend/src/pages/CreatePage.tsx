@@ -75,7 +75,11 @@ export default function CreatePage() {
   return (
     <div className="home">
       {created ? (
-        <CreatedResult share={created} onCreateAnother={resetForm} />
+        <CreatedResult
+          share={created}
+          content={content}
+          onCreateAnother={resetForm}
+        />
       ) : (
         <>
           <Hero />

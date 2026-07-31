@@ -13,10 +13,18 @@ afterEach(() => vi.mocked(copyToClipboard).mockClear());
 
 const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true };
 
-function renderResult(share: Parameters<typeof CreatedResult>[0]["share"], onCreateAnother = () => {}) {
+function renderResult(
+  share: Parameters<typeof CreatedResult>[0]["share"],
+  onCreateAnother = () => {},
+  content = "# API design review\n\nBody",
+) {
   return render(
     <MemoryRouter future={ROUTER_FUTURE}>
-      <CreatedResult share={share} onCreateAnother={onCreateAnother} />
+      <CreatedResult
+        share={share}
+        content={content}
+        onCreateAnother={onCreateAnother}
+      />
     </MemoryRouter>,
   );
 }
@@ -41,6 +49,33 @@ test("copies the link", async () => {
   renderResult(share);
   await user.click(screen.getByRole("button", { name: /copy link/i }));
   expect(copyToClipboard).toHaveBeenCalledWith(share.url);
+});
+
+test("copies the link as markdown, titled from the content", async () => {
+  const user = userEvent.setup();
+  renderResult(share);
+  await user.click(screen.getByRole("button", { name: /copy markdown/i }));
+  expect(copyToClipboard).toHaveBeenCalledWith(
+    `[API design review](${share.url})`,
+  );
+});
+
+test("copies markdown with a generic title when the content has no heading", async () => {
+  const user = userEvent.setup();
+  renderResult(share, () => {}, "   ");
+  await user.click(screen.getByRole("button", { name: /copy markdown/i }));
+  expect(copyToClipboard).toHaveBeenCalledWith(
+    `[Shared AI response](${share.url})`,
+  );
+});
+
+test("copies markdown with an absolute URL when the server URL has no scheme", async () => {
+  const user = userEvent.setup();
+  renderResult(schemelessShare);
+  await user.click(screen.getByRole("button", { name: /copy markdown/i }));
+  expect(copyToClipboard).toHaveBeenCalledWith(
+    `[API design review](${absoluteUrl})`,
+  );
 });
 
 test("invokes onCreateAnother", async () => {

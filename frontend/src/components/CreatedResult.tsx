@@ -1,16 +1,20 @@
 import type { CreatedShare } from "../api/client";
 import Masthead from "./Masthead";
 import { copyToClipboard } from "../lib/clipboard";
+import { buildMarkdownLink } from "../lib/markdownLink";
 import { toAbsoluteUrl } from "../lib/url";
 
 interface CreatedResultProps {
   share: CreatedShare;
+  /** The shared markdown, used only to title the copy-as-markdown link. */
+  content: string;
   onCreateAnother: () => void;
 }
 
 /** Handoff screen: the link, and the one-time token that can never be reissued. */
 export default function CreatedResult({
   share,
+  content,
   onCreateAnother,
 }: CreatedResultProps) {
   // Force an absolute URL: a scheme-less server URL would render as a relative
@@ -51,6 +55,13 @@ export default function CreatedResult({
             onClick={() => copyToClipboard(shareUrl)}
           >
             Copy link
+          </button>
+          <button
+            type="button"
+            className="cta-ghost"
+            onClick={() => copyToClipboard(buildMarkdownLink(content, shareUrl))}
+          >
+            Copy markdown
           </button>
           <a
             className="cta-ghost"

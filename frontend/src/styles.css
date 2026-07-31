@@ -291,7 +291,7 @@ code {
   flex: none;
   padding: 0.28rem 0.45rem;
   background: rgba(163, 59, 31, 0.28);
-  color: #d9a68f;
+  color: #fff;
   font-family: var(--font-mono);
   font-size: 0.66rem;
   white-space: nowrap;
@@ -752,6 +752,20 @@ select:focus {
 
 .markdown-preview li {
   margin-bottom: 0.35em;
+}
+
+/* GFM task lists. The global `input { width: 100% }` form rule would otherwise
+   stretch these checkboxes across the column and push the label onto its own
+   line; the marker is dropped because the checkbox already is one. */
+.markdown-preview .task-list-item {
+  list-style: none;
+  margin-left: -1.3em;
+}
+
+.markdown-preview input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.4em;
+  accent-color: var(--accent);
 }
 
 .markdown-preview pre {
