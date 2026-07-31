@@ -22,4 +22,10 @@ export const SKILL_EXAMPLES = [
  * Agents the skill works with. Claude Code is the first-class integration (the
  * packaged skill); the rest run the agent-agnostic share.py CLI.
  */
-export const AGENTS = ["Claude Code", "Cursor", "Codex", "Copilot CLI", "Cline"];
+export const AGENTS: [string, ...string[]] = [
+  "Claude Code",
+  "Cursor",
+  "Codex",
+  "Copilot CLI",
+  "Cline",
+];

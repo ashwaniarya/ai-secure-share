@@ -1,4 +1,7 @@
-from app.config import settings
+import pytest
+from pydantic import ValidationError
+
+from app.config import Settings, settings
 
 
 def _create(client, **body):
@@ -33,3 +36,15 @@ def test_stats_applies_baseline_offset(client, monkeypatch):
     response = client.get("/api/stats")
     assert response.status_code == 200
     assert response.json() == {"share_count": 1002}
+
+
+def test_stats_baseline_ships_a_nonzero_default():
+    # The shipped default is what production serves; the tests above override it.
+    assert Settings().stats_baseline == 1200
+
+
+def test_stats_baseline_rejects_a_negative_offset():
+    # A negative total fails the frontend's visibility guard, which hides the
+    # counter in a way that looks identical to the stats route being down.
+    with pytest.raises(ValidationError):
+        Settings(stats_baseline=-5000)

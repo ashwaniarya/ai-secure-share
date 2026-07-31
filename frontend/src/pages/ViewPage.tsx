@@ -17,7 +17,8 @@ type Status =
   | "need_key"
   | "decrypt_error";
 
-/** What the rail can state about a share, all of it sourced from the record. */
+// created_at/expires_at/has_password come from the record; `encrypted` is
+// derived client-side from the payload, and is re-derived after an unlock.
 interface Provenance {
   created_at: string;
   expires_at: string | null;
@@ -40,14 +41,23 @@ function Message({ title, body }: { title: string; body: string }) {
   );
 }
 
+const HAS_TIMEZONE = /(Z|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * The backend stores naive UTC (models.py strips tzinfo), so timestamps arrive
+ * with no offset and would otherwise be read as local time. Dates are rendered
+ * in UTC and labelled: the rail is a record of what happened, so two people in
+ * different timezones must not read different dates off the same share.
+ */
 function formatDate(value: string): string {
-  const parsed = new Date(value.endsWith("Z") ? value : `${value}Z`);
+  const parsed = new Date(HAS_TIMEZONE.test(value) ? value : `${value}Z`);
   if (Number.isNaN(parsed.getTime())) return "Unknown";
-  return parsed.toLocaleDateString(undefined, {
+  return `${parsed.toLocaleDateString("en-GB", {
+    timeZone: "UTC",
     day: "numeric",
     month: "short",
     year: "numeric",
-  });
+  })} UTC`;
 }
 
 function railEntries(provenance: Provenance): RailEntry[] {
@@ -117,6 +127,14 @@ export default function ViewPage() {
 
   useEffect(() => {
     let active = true;
+    // The route reuses this component across /s/A -> /s/B, so without an
+    // explicit reset the previous share's content and provenance stay on
+    // screen under the new slug while the fetch is in flight.
+    setStatus("loading");
+    setContent(null);
+    setProvenance(null);
+    setPassword("");
+    setUnlockError(null);
     getShare(slug)
       .then(async (view) => {
         if (!active) return;

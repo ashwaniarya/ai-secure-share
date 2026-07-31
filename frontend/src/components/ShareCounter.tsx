@@ -17,7 +17,11 @@ export default function ShareCounter() {
         .then((stats) => {
           if (active) setCount(stats.share_count);
         })
-        .catch(() => {});
+        .catch((error) => {
+          // The counter hides itself on failure, so without this an outage is
+          // indistinguishable from a genuinely small count.
+          console.error("[ShareCounter] stats request failed", error);
+        });
     }
 
     load();
@@ -30,7 +34,11 @@ export default function ShareCounter() {
     };
   }, []);
 
-  if (count === null || count < MIN_VISIBLE_COUNT) return null;
+  // The declared type is a compile-time claim about an untrusted payload: a
+  // missing or renamed share_count arrives as undefined, which slips past both
+  // a null check and a `< MIN` comparison and would crash the render.
+  if (typeof count !== "number" || !Number.isFinite(count)) return null;
+  if (count < MIN_VISIBLE_COUNT) return null;
 
   return (
     <div className="rail-item">

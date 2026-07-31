@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, test, vi } from "vitest";
@@ -51,8 +51,18 @@ test("renders the agent-first headline and feature chips", () => {
 
 test("lists the agents it works with", () => {
   renderHero();
-  expect(screen.getAllByText("Claude Code").length).toBeGreaterThan(0);
-  expect(screen.getAllByText("Cursor").length).toBeGreaterThan(0);
+  // Agents render twice — in the rail and in the agents row — so scope to each
+  // source. An unscoped count passes when either one is deleted.
+  const rail = within(
+    screen.getByRole("complementary", { name: /record details/i }),
+  );
+  expect(rail.getByText("Claude Code")).toBeInTheDocument();
+  expect(rail.getByText("Cursor")).toBeInTheDocument();
+  expect(
+    within(screen.getByText(/works in/i).closest("p") as HTMLElement).getByText(
+      "Claude Code",
+    ),
+  ).toBeInTheDocument();
 });
 
 test("clicking the composer send reveals the install panel and copies the prompt", async () => {
@@ -71,7 +81,13 @@ test("clicking the composer send reveals the install panel and copies the prompt
 test("shows the live share count in the provenance rail", async () => {
   vi.mocked(getStats).mockResolvedValueOnce({ share_count: 1234 });
   renderHero();
-  expect(await screen.findByText("1,234")).toBeInTheDocument();
+  await screen.findByText("1,234");
+  // Scoped: ShareCounter renders its own rail markup, so an unscoped query
+  // passes even if the rail itself is removed from the hero.
+  const rail = within(
+    screen.getByRole("complementary", { name: /record details/i }),
+  );
+  expect(rail.getByText("1,234")).toBeInTheDocument();
 });
 
 test("offers a path for other agents", () => {
