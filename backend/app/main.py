@@ -35,6 +35,7 @@ def _mount_frontend(app: FastAPI) -> None:
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
+    static_root = static_dir.resolve()
     index_file = static_dir / "index.html"
     # Cache the shell once; OG tags are swapped in per request for crawlers.
     index_html = index_file.read_text(encoding="utf-8")
@@ -66,8 +67,21 @@ def _mount_frontend(app: FastAPI) -> None:
     def serve_spa(full_path: str):
         if full_path.startswith("api"):
             raise HTTPException(status_code=404)
-        candidate = static_dir / full_path
-        if full_path and candidate.is_file():
+        # Containment check: ``static_dir / full_path`` does not normalise
+        # ``..``, so an escaping path would otherwise be served like any asset.
+        # A hostile path can also be unstattable rather than merely absent — an
+        # embedded NUL, a segment over NAME_MAX — which raises out of resolve()
+        # and is_file(). Fall through to the shell instead of a 500.
+        try:
+            candidate = (static_dir / full_path).resolve()
+            is_asset = (
+                bool(full_path)
+                and candidate.is_relative_to(static_root)
+                and candidate.is_file()
+            )
+        except (OSError, ValueError):
+            is_asset = False
+        if is_asset:
             return FileResponse(candidate)
         return FileResponse(index_file)
 
